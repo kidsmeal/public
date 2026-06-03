@@ -134,6 +134,7 @@ Compass Rose adds only the connective commands. The day-to-day verbs are still t
 |---|---|
 | `/compass:init` | Bootstrap the workbench: initialize the three instruments in order and wire the seams. |
 | `/compass:status` | The unified brief — active thread, roadmap horizon, where you are in the pipeline, and one staleness read across all three tools. |
+| `/compass:doctor` | Health-check the workbench — broken doc links, orphan/missing docs, roadmap schema gaps, stale standing docs — and offer to fix the safe ones. |
 | `/compass:promote` | Take a triaged idea down the **full lane**: ground it in the map, hand it to Gantry's design author, then register the design and plan on the roadmap. |
 | `/compass:quick` | Pointer to ClauDHD's native quick-fixes lane — forwards to `/claudhd:quick` (add a chore, or clear the batch). |
 | `/compass:advance` | Drive the active roadmap entry's next gated step (design → plan → build → review) and move the cursor when a phase ships. Stops at your decisions and commits. |
