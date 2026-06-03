@@ -151,6 +151,13 @@ Seed it from **real signal**, never invention:
 - recent commit history (what's been moving),
 - and whatever the user tells you about current priorities.
 
+Mind the **horizon**. A roadmap is medium-term — weeks to months. Don't source it from, or alias
+it to, a short-horizon *session-continuity* file (a `NOW.md`, breadcrumb / last-session state, or
+similar): those record the current thread (hours to days) and are developer workbench tooling,
+not a plan. At most such a file informs the single "In progress" line. A real ROADMAP links out
+only to a genuine roadmap-horizon tracker — an existing `ROADMAP.md`, a `plans/` dir, Jira,
+Linear, Trello, or GitHub Projects.
+
 ```markdown
 # Roadmap
 
@@ -173,7 +180,18 @@ Current state of play. Not a backlog dump — the things actually in motion.
 ```
 
 Guidance:
+- **Offer to build it together — this is the one doc you can't read off the code.** The other four come from the repo; "what's next / blocked / planned" comes from the person. So when the roadmap is in scope and there's no authoritative tracker to point at, ask once, then either interview or stub:
+  > *"The roadmap is the one piece I can't infer from the code. Want to build a real one together — I'll ask a handful of quick questions — or should I leave a thin stub that links to wherever you track work?"*
+
+  If they decline, write the sparse/linked version and move on. **If no human is in the loop (an agent / headless run), skip the offer** and use the weak-signal seed — never block waiting on answers.
+- **Run it as a conversation, not a form.** Treat the questions below as a checklist of what a roadmap needs, asked as a thread that adapts to the answers — the moment they name a tracker ("we use Trello"), stop asking and pivot to *"link to it, or pull the current items in as the starting point?"* (and if you can reach it, offer to populate from it):
+  1. What are you actively working on right now? → *In progress*
+  2. What are the next few things after that? → *Next up*
+  3. Anything blocked or waiting on something else? → *Blocked*
+  4. A near-term milestone or release you're aiming at? → sets the horizon
+  5. Where do you track work, if anywhere (Trello / Jira / Linear / GitHub issues / a `plans/` doc)? → link out or pull in
+  6. Anything that should explicitly *not* be worked on — known non-goals? → *Someday* / out-of-scope
 - **Active over exhaustive.** A roadmap that lists 200 backlog items is a backlog, not a roadmap, and nobody trusts it. Capture what's in motion.
 - **Convert relative dates to absolute** ("next sprint" → a real date) so the doc still makes sense in three months.
 - **It's allowed to be sparse.** If you only know what's in progress, write that and leave the rest as headers. Honest and short beats padded.
-- If the project already tracks work in an external tool (Jira, Linear, Trello, GitHub Projects), note that and keep ROADMAP as a thin summary that links out, rather than a competing source of truth.
+- **Link to a real tracker, don't compete with it.** If work already lives in an external tool or an existing `ROADMAP.md`, keep this doc a thin summary that links out — not a second source of truth that will drift.

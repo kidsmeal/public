@@ -113,7 +113,10 @@ what "extremely detailed" actually means and keep output consistent across repos
 - **Glossary, Roadmap, Conventions, and the CLAUDE.md block** → follow `references/satellite_docs.md`, which has a template and guidance for each.
 
 Seed the ROADMAP from real signal — `TODO`/`FIXME` markers, open issues, recent git history,
-and anything the user tells you — not from imagination.
+and anything the user tells you — not from imagination. It's the one doc you can't read off the
+code, so in an interactive session **offer to build it together** with a few quick questions
+(see `references/satellite_docs.md` § ROADMAP.md), and never source it from short-horizon
+session files like `NOW.md`; in a headless run, fall back to the weak-signal seed.
 
 ### 5. Wire and verify — make it trustworthy
 
