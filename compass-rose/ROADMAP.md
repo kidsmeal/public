@@ -125,6 +125,8 @@ The roadmap row is the single source of truth for a feature's state and its link
 
 *Compass's only part of C:* surface the signals in `status`/`doctor`, and wire C1 from the reviewer. Everything else is Cartographer gaining a small `scripts/` layer (now that it's a plugin) plus authoring-guidance edits.
 
+**Status:** C2 (`drift.js`) and C3 (`verify.js`) shipped — 11 tests — and `/compass:doctor` now requires Cartographer's canonical checks when co-installed (lite commit-age fallback otherwise). C5 (low-drift authoring rule) and C4 (a "Refreshing an existing map" workflow) are in the cartographer skill. Remaining: a true incremental `--refresh` mode, per-section (vs per-doc) drift, and C1's diff-impact signal in Gantry.
+
 *Acceptance:* a rename that invalidates the map is flagged at the next phase review, not weeks later; `status` always has an honest "what's stale" line, fed by Cartographer's scorer.
 
 ---
@@ -183,9 +185,9 @@ Sequenced by dependency and leverage, written in the proposed row schema as a li
 
 ## Later
 - [ ] Doc-freshness engine (Cartographer): drift scoring + checkable claims + refresh  <!-- id: doc-freshness -->
-  - status: designing
-  - design: (Workstream C — mostly Cartographer; needs its own doc)
-  - blocked_by: doctor, status-v2
+  - status: in_progress
+  - design: (Workstream C — verify.js + drift.js shipped & wired into doctor; C4/C5 in the skill)
+  - blocked_by: —
 - [ ] Middle lane + quick-fix hard limits  <!-- id: lanes -->
   - status: designed
   - design: (Workstream D)

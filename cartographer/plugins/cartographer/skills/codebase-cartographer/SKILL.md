@@ -64,6 +64,7 @@ These shape every decision below — internalize them, don't just skim.
 - **Depth where it counts.** The codebase map earns real length; satellites stay lean. A glossary nobody finishes is useless. Spend your detail budget on the map.
 - **Write for two readers at once.** An AI agent that needs exact paths and wiring, and a human who needs the mental model. Lead with the model, back it with paths.
 - **Map the product, not the workbench.** A repo usually holds files that belong to a developer's *tooling and workflow* rather than the software the repo produces — agent/AI-harness scaffolding (session-continuity files like `NOW.md`/`IDEAS.md`/breadcrumb state, assistant config, slash-command plugins), editor settings, CI scratch, smoke-test artifacts. These describe how someone *works on* the code, not how the code *works*, and they often aren't even the same from one contributor to the next. Keep them out of the subsystem inventory. The test: "would this file exist if a different developer rebuilt the same product?" If no, it's workbench. If such files are genuinely load-bearing for contributors, isolate them in a short, clearly-labeled "Developer tooling / workflow" aside — never interleaved with real modules. When you can't tell whether something is product or tooling, **raise it at the proposal checkpoint instead of silently deciding.**
+- **Write for low drift.** A standing doc rots when the code outruns it, so make rot *slow to happen and cheap to detect*: describe the **slow-changing structure** — module boundaries, data flow, entry points — not the churny detail (every file, every function), and prefer **checkable claims** — cite exact paths and `#anchors`, which the bundled `scripts/verify.js` re-checks — over prose that can quietly go wrong. Coarse and true outlives exhaustive and stale. (`scripts/drift.js` scores how far each doc has lagged the code it cites.)
 
 ## Workflow
 
@@ -135,7 +136,17 @@ The docs are only done once they're connected and correct:
 - **Wire CLAUDE.md.** Add or update the "Where things are" block so every doc is reachable from the front door. If CLAUDE.md doesn't exist, create a minimal one whose first real section is this block.
 - **Cross-link.** Each satellite links back to the map; the map links out to deeper docs. Link liberally — a reader should never hit a dead end.
 - **Verify every path.** Walk every file/directory reference in every doc and confirm it exists. Fix or remove anything stale. State to the user that you did this — it's the step that makes the map trustworthy.
-- **Leave update guidance.** End the map with a short "keep this current" note naming what events should trigger an update (new subsystem, new entry point, moved module), so the map doesn't rot.
+- **Leave update guidance.** End the map with a short "keep this current" note naming what events should trigger an update (new subsystem, new entry point, moved module), so the map doesn't rot — and point at `scripts/verify.js` (do the cited paths/anchors still resolve?) and `scripts/drift.js` (how far has each doc lagged the code it cites?) as the checks that catch drift between updates.
+
+## Refreshing an existing map
+
+When the docs already exist and you're *updating* rather than creating, don't regenerate from
+scratch — find what drifted and fix only that, so you keep the parts that are still true (and any
+human edits in them).
+
+1. **Find the drift.** Run the bundled freshness checks: `node scripts/verify.js <repo>` flags every cited path or `#anchor` that no longer resolves; `node scripts/drift.js <repo>` scores how many commits have touched the files each doc cites since the doc was last updated, flagging the stale ones. (When Compass Rose is installed, `/compass:doctor` surfaces both for you.)
+2. **Regenerate only what's flagged.** For a doc or section the checks flag, re-read the current code for that area and rewrite just that part. Leave clean docs and sections untouched — augment, never clobber.
+3. **Re-verify.** Run `verify.js` again; it should come back clean. Tell the user what you refreshed and why.
 
 ## Adapting to the repo
 

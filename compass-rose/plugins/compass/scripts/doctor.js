@@ -29,6 +29,31 @@ function listMd(rel) {
   catch { return []; }
 }
 
+// Best-effort: locate the co-installed cartographer plugin's freshness scripts
+// and require them, so doctor surfaces the *canonical* path/anchor verification
+// and per-doc drift (which Cartographer owns) rather than its own lite stand-in.
+// Returns null when the plugin can't be found, and doctor falls back.
+function loadCartographerFreshness() {
+  try {
+    let dir = __dirname, cache = null;
+    for (let i = 0; i < 10; i++) {
+      if (path.basename(dir) === "cache" && path.basename(path.dirname(dir)) === "plugins") { cache = dir; break; }
+      const up = path.dirname(dir); if (up === dir) break; dir = up;
+    }
+    if (!cache) return null;
+    const base = path.join(cache, "cartographer", "cartographer");
+    let versions = [];
+    try { versions = fs.readdirSync(base).sort().reverse(); } catch { return null; }
+    for (const v of versions) {
+      const s = path.join(base, v, "plugins", "cartographer", "scripts");
+      if (fs.existsSync(path.join(s, "verify.js")) && fs.existsSync(path.join(s, "drift.js"))) {
+        return { verifyDocs: require(path.join(s, "verify.js")).verifyDocs, driftScores: require(path.join(s, "drift.js")).driftScores };
+      }
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
 const findings = [];
 const add = (level, msg, fix) => findings.push({ level, msg, fix: fix || null });
 
@@ -74,20 +99,39 @@ if (committedRows && realDirty.length) {
   add("info", committedRows + " phase(s) marked committed, but the tree has " + realDirty.length + " uncommitted change(s).", "commit them, or set phase_state back to building/in_review");
 }
 
-// --- staleness: standing docs vs code churn (Workstream C2, interim lite surface) ---
-// The canonical per-section drift scorer belongs in the cartographer plugin (it
-// owns the docs it generated); this is the cheap surface doctor shows today.
-function commitsSince(rel) {
-  const last = git(["log", "-1", "--format=%H", "--", rel]);
-  if (!last) return null;
-  const n = git(["rev-list", "--count", last + "..HEAD"]);
-  return n ? parseInt(n, 10) : 0;
-}
-for (const rel of ["docs/INDEX.md", "INDEX.md", "docs/CONVENTIONS.md", "CONVENTIONS.md", "docs/GLOSSARY.md"]) {
-  if (!exists(rel)) continue;
-  const c = commitsSince(rel);
-  if (c != null && c >= STALE_COMMITS) {
-    add("info", rel + " unchanged across " + c + " commits to the repo - probably stale.", "regenerate with the cartographer skill");
+// --- staleness: cited path/anchor verification + per-doc drift ---
+// Owned by Cartographer (it generates the docs). When its plugin is co-installed
+// we surface the canonical checks; otherwise we fall back to a lite commit-age
+// stand-in so doctor still says something useful on its own.
+const carto = loadCartographerFreshness();
+if (carto) {
+  try {
+    for (const f of carto.verifyDocs(ROOT).findings) {
+      add(f.kind === "missing-path" ? "error" : "warn",
+        "doc[" + f.doc + ":" + f.line + "]: " + f.kind + " " + f.ref + " -> " + f.detail,
+        "fix the reference, or regenerate the doc (cartographer)");
+    }
+  } catch { /* ignore */ }
+  try {
+    const { threshold, results } = carto.driftScores(ROOT);
+    for (const x of results) {
+      if (x.stale) add("info", x.doc + " lags the code it cites (" + x.score + " commits >= " + threshold + ").", "regenerate / refresh with the cartographer skill");
+    }
+  } catch { /* ignore */ }
+} else {
+  // Fallback (cartographer plugin not found): lite commit-age staleness.
+  const commitsSince = (rel) => {
+    const last = git(["log", "-1", "--format=%H", "--", rel]);
+    if (!last) return null;
+    const n = git(["rev-list", "--count", last + "..HEAD"]);
+    return n ? parseInt(n, 10) : 0;
+  };
+  for (const rel of ["docs/INDEX.md", "INDEX.md", "docs/CONVENTIONS.md", "CONVENTIONS.md", "docs/GLOSSARY.md"]) {
+    if (!exists(rel)) continue;
+    const c = commitsSince(rel);
+    if (c != null && c >= STALE_COMMITS) {
+      add("info", rel + " unchanged across " + c + " commits to the repo - probably stale.", "regenerate with the cartographer skill");
+    }
   }
 }
 
