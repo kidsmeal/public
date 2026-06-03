@@ -26,6 +26,7 @@ The three cover space, time, and process. Compass Rose's job is to keep them poi
 - **Plans grounded in the map.** Gantry's design author and planner read Cartographer's `INDEX.md` and `GLOSSARY.md` first, so a design starts oriented instead of re-deriving the layout.
 - **Conventions enforced end to end.** Cartographer *writes* `CONVENTIONS.md`; Gantry's implementer and reviewer treat that exact file as law. Compass Rose makes that handoff explicit, so the rules you documented are the rules the diff is held to.
 - **One staleness signal.** Cartographer verifies every path it cites, Gantry's currentness audit reconciles doc claims against the code, and ClauDHD flags a stale cursor and piling-up work. Compass Rose folds the three into a single "is our self-knowledge still true?" read via `/compass:status`.
+- **Machine-readable state, and a doctor.** Each roadmap row carries structured state (`status` / `active_phase` / `phase_state`) that `/compass:advance` writes and `/compass:status` reads — commands reason over data, not prose. `/compass:doctor` health-checks the workbench (broken doc links, orphan docs, schema gaps, stale standing docs) and offers to fix the safe ones.
 
 ## The pipeline
 
@@ -79,9 +80,10 @@ The three tools do the heavy lifting. Compass Rose's own job is the seams — th
 
 - **Map → plan.** Before Gantry's design author and planner reason about a feature, Compass Rose points them at `docs/INDEX.md` and `docs/GLOSSARY.md`, so the plan is grounded in the real layout rather than re-discovered each time.
 - **Conventions → gate.** Compass Rose records the path to the `CONVENTIONS.md` Cartographer wrote and hands it to Gantry's implementer and reviewer as the law for naming, structure, and anti-patterns — closing the loop between the rules you document and the diff you ship.
-- **Plan → roadmap → cursor.** When a design and plan are finalized, Compass Rose registers a roadmap row that links to both, and the active row is what `NOW.md` points at. The roadmap becomes the load-bearing hub; the cursor is just the read-head positioned on it.
+- **Plan → roadmap → cursor.** When a design and plan are finalized, Compass Rose registers a roadmap row that links to both, and the active row is what `NOW.md` points at. The row carries structured state (`status` / `active_phase` / `phase_state`) as the single source of truth — `/compass:advance` writes it at each step; `/compass:status` and `/compass:doctor` read it. The roadmap is the load-bearing hub; the cursor is just the read-head positioned on it.
 - **Two lanes out of triage.** The quick lane is **ClauDHD-native**: `/claudhd:quick` manages a capped quick-fixes batch in `NOW.md` (overflow forces a decision, a fix that balloons is kicked back to `IDEAS.md`, and ClauDHD's session brief flags an over-cap batch as drift). Compass Rose owns the *full* lane, `/compass:promote`. The split is one question — would it need a design or a review gate? — so you stop deciding it ad hoc.
 - **Three freshness checks → one brief.** Path verification, the currentness audit, and the drift flags are folded into a single staleness read, surfaced on demand via `/compass:status`.
+- **Unmistakable human gates.** Every control-flow command ends in one greppable gate label — `=== GATE: COMMIT REQUIRED ===`, `REVIEW FAILED`, `HUMAN DECISION REQUIRED`, `BLOCKED`, or `SAFE TO ADVANCE` — so the next required action is never buried in prose.
 
 ## Quick Start
 
@@ -143,6 +145,10 @@ Compass Rose adds only the connective commands. The day-to-day verbs are still t
 ## What runs automatically
 
 Compass Rose adds no hooks of its own. The instruments' automation keeps running untouched — ClauDHD's `Stop` checkpoint (a pure local script, zero tokens) and its `SessionStart` brief still fire, so the breadcrumb is never more than one turn behind. Compass Rose's *unified* brief — your heading, the roadmap entry it belongs to, the phase in flight, and the single staleness read — is on demand via `/compass:status`. Keeping it on demand for now means no second `SessionStart` hook competing with ClauDHD's; folding it into the session-start brief is a candidate for a later version.
+
+## Status
+
+Young but real. Built today: the connective commands (`/compass:init`, `:status`, `:promote`, `:advance`, `:quick`, `:doctor`, `:version`), the machine-readable roadmap-row schema and its parser, and the gate-label convention — covered by a small zero-dependency test suite (`npm test`). The doc-freshness engine (drift scoring, checkable claims, map refresh — owned by Cartographer) and a couple of workflow refinements are planned. The full plan, with design principles and sequencing, is in [ROADMAP.md](ROADMAP.md).
 
 ## The methodology
 
