@@ -152,9 +152,9 @@ The roadmap row is the single source of truth for a feature's state and its link
 
 *Ideas 7, 9.*
 
-- **E1. Extract the tool-agnostic spec (idea 7).** Pull the methodology, file formats, state model, gate labels, and lane rules into a `SPEC.md` any agent can follow. Crucial enabler already true: the deterministic engine (`checkpoint.js`, `brief.js`, `status.js`, the planned `doctor`/drift scripts, `scan_repo.py`) is **plain Node/Python with no Claude dependency** — it's the portable core. Only the `.md` command wrappers and hooks are Claude-native.
-- **E2. A Codex / generic-agent binding (idea 7).** Map the workflow onto: `AGENTS.md` as the conventions/instructions carrier, the existing scripts run directly (or from CI), a "review mode" mapping for the gate, and the same Markdown files (NOW/SHIPPED/roadmap) for continuity — optionally an MCP/thread tool where a host supports it. A binding, not a fork.
-- **E3. A worked example (idea 9).** Ship `examples/walkthrough.md`: one fictional feature traced through every artifact — raw idea → design → plan → roadmap row → NOW cursor → a phase build → a phase review that finds something → shipped log — with the real file contents at each step. Doubles as the canonical live example of the schemas, and lets a reader decide whether the ceremony is worth it before adopting.
+- **E1. Extract the tool-agnostic spec (idea 7). ✅ shipped ([`SPEC.md`](SPEC.md)).** Pull the methodology, file formats, state model, gate labels, and lane rules into a `SPEC.md` any agent can follow. Crucial enabler already true: the deterministic engine (`checkpoint.js`, `brief.js`, `status.js`, the planned `doctor`/drift scripts, `scan_repo.py`) is **plain Node/Python with no Claude dependency** — it's the portable core. Only the `.md` command wrappers and hooks are Claude-native.
+- **E2. A Codex / generic-agent binding (idea 7). ✅ shipped ([`bindings/AGENTS.md`](bindings/AGENTS.md)).** Map the workflow onto: `AGENTS.md` as the conventions/instructions carrier, the existing scripts run directly (or from CI), a "review mode" mapping for the gate, and the same Markdown files (NOW/SHIPPED/roadmap) for continuity — optionally an MCP/thread tool where a host supports it. A binding, not a fork.
+- **E3. A worked example (idea 9). ✅ shipped ([`examples/walkthrough.md`](examples/walkthrough.md)).** Ship `examples/walkthrough.md`: one fictional feature traced through every artifact — raw idea → design → plan → roadmap row → NOW cursor → a phase build → a phase review that finds something → shipped log — with the real file contents at each step. Doubles as the canonical live example of the schemas, and lets a reader decide whether the ceremony is worth it before adopting.
 
 *Acceptance:* the engine runs headless so a non-Claude binding is thin; a newcomer can read one walkthrough and understand the whole loop.
 
@@ -192,10 +192,10 @@ Sequenced by dependency and leverage, written in the proposed row schema as a li
   - status: done
   - design: (Workstream D — /compass:promote --small + a lane field; claudhd cap->3 + hard rules)
   - blocked_by: —
-- [ ] Tool-agnostic SPEC + Codex binding + worked example  <!-- id: portability -->
-  - status: designing
-  - design: (Workstream E — needs its own doc)
-  - blocked_by: lanes
+- [x] Tool-agnostic SPEC + Codex binding + worked example  <!-- id: portability -->
+  - status: done
+  - design: (Workstream E — SPEC.md + bindings/AGENTS.md + examples/walkthrough.md)
+  - blocked_by: —
 ```
 
 **Rationale for the order:** A is foundational — B and C are far more reliable once state is structured rather than inferred. B is the user's top-three and the most-felt daily value, so it comes right after the foundation. C (mostly Cartographer) is the highest *conceptual* win but leans on B's surfaces (`status`/`doctor`) to be visible, so it follows. D can slot in anytime after A; it's independent quality-of-life. E is last because it should freeze a stable core before binding a second tool to it.

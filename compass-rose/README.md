@@ -149,7 +149,12 @@ Compass Rose adds no hooks of its own. The instruments' automation keeps running
 
 ## Status
 
-Young but real. Built today: the connective commands (`/compass:init`, `:status`, `:promote`, `:advance`, `:quick`, `:doctor`, `:version`), the machine-readable roadmap-row schema and its parser, and the gate-label convention — covered by a small zero-dependency test suite (`npm test`). The doc-freshness engine (drift scoring, checkable claims, map refresh — owned by Cartographer) and a couple of workflow refinements are planned. The full plan, with design principles and sequencing, is in [ROADMAP.md](ROADMAP.md).
+Young but real. Built: the connective commands (`/compass:init`, `:status`, `:promote` + `--small`, `:advance`, `:quick`, `:doctor`, `:version`), the machine-readable roadmap-row schema + parser, the three lanes, the gate-label convention, and the doc-freshness engine (`verify.js` / `drift.js`, wired into `doctor`) — covered by a zero-dependency test suite (`npm test`).
+
+- **[SPEC.md](SPEC.md)** — the tool-agnostic contract: spine, row schema, state machine, lanes, gates, freshness.
+- **[bindings/AGENTS.md](bindings/AGENTS.md)** — run the methodology under Codex / Cursor / any `AGENTS.md` agent.
+- **[examples/walkthrough.md](examples/walkthrough.md)** — one feature traced through every artifact.
+- **[ROADMAP.md](ROADMAP.md)** — the full plan, design principles, and what's still open.
 
 ## The methodology
 
