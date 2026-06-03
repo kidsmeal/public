@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-marketplace.json",
+  "name": "compass-rose",
+  "owner": {
+    "name": "kidsmeal",
+    "url": "https://github.com/kidsmeal"
+  },
+  "description": "Compass Rose: a workbench and methodology that connects Codebase-Cartographer, ClauDHD, and Gantry into one idea-to-implementation pipeline for Claude Code.",
+  "plugins": [
+    {
+      "name": "compass",
+      "source": "./plugins/compass",
+      "description": "The connective layer over Codebase-Cartographer (the chart), ClauDHD (dead reckoning), and Gantry (the dock): map-grounded design, a roadmap that is the hub, a two-lane triage with a capped quick-fixes batch, and a unified session brief. Orchestrates the three instruments; does not replace them.",
+      "version": "0.1.0",
+      "author": { "name": "kidsmeal" }
+    }
+  ]
+}
