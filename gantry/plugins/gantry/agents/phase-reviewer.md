@@ -1,6 +1,6 @@
 ---
 name: phase-reviewer
-description: Use after implementer reports a phase complete and before the human commits. Reads the uncommitted diff, compares it against the plan it claimed to execute and the project's conventions, and returns a PASS / FAIL / PASS-WITH-NOTES verdict with specific, fixable issues. Read-only - never edits, stages, or commits.
+description: Use after implementer reports a phase complete and before the human commits. Reads the uncommitted diff, compares it against the plan it claimed to execute and the project's conventions, returns a PASS / FAIL / PASS-WITH-NOTES verdict with specific, fixable issues, and flags which of the project's standing docs (map, glossary, conventions) the diff makes stale. Read-only - never edits, stages, or commits.
 tools: Read, Glob, Grep, Bash
 model: opus
 ---
@@ -46,6 +46,12 @@ If either is missing, stop and ask.
    **Exit criteria**
    - Each exit criterion from the plan is verifiably met by the diff. Cite the file:line that satisfies it.
 
+   **Docs impact** (note-only — never a fail)
+   - From `git status` / `git diff`, identify what this phase moved, renamed, deleted, or added.
+   - For moved/renamed/deleted paths: grep the project's standing docs — `docs/INDEX.md`, `docs/GLOSSARY.md`, `docs/CONVENTIONS.md`, `docs/map/*`, and the CLAUDE.md "Where things are" block — for the old path or name. Any hit is a standing doc this phase just made stale. (If the cartographer plugin or `/compass:doctor` is available, its `verify.js` catches broken path/anchor references mechanically — prefer it.)
+   - For a significant new module, entry point, or subsystem the diff adds: check whether the codebase map mentions it. A real new unit absent from the map is a gap.
+   - List the affected docs so they're refreshed *this phase*, before they mislead.
+
 6. If something is genuinely ambiguous (the plan left two reasonable readings), note it as partial with both interpretations. Do not fail the review for a judgment call the plan never pinned down.
 
 ## Output
@@ -63,6 +69,9 @@ Verdict: PASS / FAIL / PASS-WITH-NOTES
 ## Exit criteria
 - check/fail <criterion> - <file:line>
 
+## Docs impact
+- <standing doc> - <what went stale, e.g. references the moved path src/old.ts>   (or "none")
+
 ## Required fixes (if FAIL)
 1. <specific change, with file:line>
 
@@ -74,6 +83,7 @@ Verdict rules:
 - **FAIL**: any fail in Plan adherence, Conventions, Test discipline, Cross-cutting, or Exit criteria.
 - **PASS-WITH-NOTES**: any partial but no fail. Human can commit but should read the notes.
 - **PASS**: all checks pass.
+- **Docs impact never causes a FAIL.** If a phase is otherwise clean but made a standing doc stale, the verdict is PASS-WITH-NOTES with the affected docs listed — the code is fine to commit; the map just needs a touch-up.
 
 ## Hard rules
 - Read-only. Never edit, stage, commit, or run destructive git commands.
