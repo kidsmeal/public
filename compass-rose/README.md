@@ -2,7 +2,7 @@
 
 A workbench and methodology for AI-assisted development, for [Claude Code](https://claude.com/claude-code).
 
-Compass Rose connects three small Claude Code tools — [Codebase-Cartographer](../skills/codebase-cartographer/README.md), [ClauDHD](https://github.com/kidsmeal/ClauDHD), and [Gantry](../gantry/README.md) — into a single idea-to-implementation pipeline, so a feature has one continuous path from a half-formed thought to a reviewed commit. Each tool solves one axis of the problem on its own — *where things are*, *where you are*, and *how work gets built* — but used separately, you move work between them by hand: copy a decision from the map into a plan, remember which plan a cursor refers to, re-check conventions at review time. Compass Rose is the connective layer that does those hand-offs for you, plus the methodology for how a unit of work moves through the three.
+Compass Rose connects three small Claude Code tools — [Codebase-Cartographer](../cartographer/README.md), [ClauDHD](https://github.com/kidsmeal/ClauDHD), and [Gantry](../gantry/README.md) — into a single idea-to-implementation pipeline, so a feature has one continuous path from a half-formed thought to a reviewed commit. Each tool solves one axis of the problem on its own — *where things are*, *where you are*, and *how work gets built* — but used separately, you move work between them by hand: copy a decision from the map into a plan, remember which plan a cursor refers to, re-check conventions at review time. Compass Rose is the connective layer that does those hand-offs for you, plus the methodology for how a unit of work moves through the three.
 
 The idea is the same one the three tools are built on, applied one level up: rather than trusting yourself (or the model) to remember the process, build the process into the files. Compass Rose adds almost no state of its own. The three tools keep owning their Markdown; Compass Rose wires them so the output of one is the input of the next — the map feeds the plan, the plan registers on the roadmap, the roadmap is what the cursor points at, the cursor advances when a phase ships. It has zero dependencies, runs on local files and ordinary git, makes no network calls of its own, and uses the Node.js runtime Claude Code already bundles.
 
@@ -12,7 +12,7 @@ Compass Rose does not replace the tools it connects — each stays installable a
 
 | Instrument | Axis | Owns | What it provides |
 |---|---|---|---|
-| [Codebase-Cartographer](../skills/codebase-cartographer/README.md) | **Space** — where things are | `docs/INDEX.md`, `GLOSSARY.md`, `CONVENTIONS.md`, `ROADMAP.md`, the CLAUDE.md "Where things are" block | The codebase map, glossary, and conventions |
+| [Codebase-Cartographer](../cartographer/README.md) | **Space** — where things are | `docs/INDEX.md`, `GLOSSARY.md`, `CONVENTIONS.md`, `ROADMAP.md`, the CLAUDE.md "Where things are" block | The codebase map, glossary, and conventions |
 | [ClauDHD](https://github.com/kidsmeal/ClauDHD) | **Time** — where you are | `NOW.md`, `IDEAS.md`, `SHIPPED.md`, plus the `Stop` / `SessionStart` hooks | The active-thread cursor and cross-session continuity |
 | [Gantry](../gantry/README.md) | **Process** — how it gets built | `DESIGN` / `PLAN` docs, four gated subagents, `CURRENTNESS_AUDIT.md`, `RUNTIME_VERIFICATION_QUEUE.md` | The gated design → plan → build → review pipeline |
 
@@ -85,28 +85,28 @@ The three tools do the heavy lifting. Compass Rose's own job is the seams — th
 
 ## Quick Start
 
-### 1. Install the three instruments
+### 1. Add the marketplace
 
 ```
-# ClauDHD (separate marketplace)
-/plugin marketplace add kidsmeal/ClauDHD
-/plugin install claudhd@claudhd
-
-# Gantry + Codebase-Cartographer (this repo)
 git clone https://github.com/kidsmeal/public.git
-/plugin marketplace add public/gantry
-/plugin install gantry@gantry
-cp -r public/skills/codebase-cartographer ~/.claude/skills/
-```
-
-### 2. Install Compass Rose
-
-```
 /plugin marketplace add public/compass-rose
-/plugin install compass@compass-rose
 ```
 
-(The marketplace is `compass-rose`; the plugin inside it is `compass`, so its commands are `/compass:*`.)
+### 2. Install — the whole bundle, or à la carte
+
+```
+# Everything: the connector plus its three dependencies (Cartographer, ClauDHD, Gantry)
+/plugin install compass@compass-rose
+
+# ...or just the pieces you want
+/plugin install cartographer@compass-rose
+/plugin install claudhd@compass-rose
+/plugin install gantry@compass-rose
+```
+
+Installing `compass` pulls in the other three automatically — they are declared as its dependencies. The marketplace is `compass-rose`; the connector plugin is `compass`, so its commands are `/compass:*`.
+
+The three are **also published in their own marketplaces**, if you'd rather track them independently: `claudhd@claudhd` ([kidsmeal/ClauDHD](https://github.com/kidsmeal/ClauDHD)), and `gantry@gantry` / `cartographer@cartographer` (both in this repo). Cartographer is additionally available as a single-file skill — see [its README](../cartographer/README.md).
 
 If you install during an existing session, run `/reload-plugins` to activate everything. No restart is needed.
 
@@ -164,7 +164,7 @@ The tools are how; this is why. Compass Rose is an opinionated way of working, a
 
 - Claude Code (provides Node).
 - git, for the cursor, the audits, and the shipped log.
-- The three instruments installed: [Codebase-Cartographer](../skills/codebase-cartographer/README.md), [ClauDHD](https://github.com/kidsmeal/ClauDHD), and [Gantry](../gantry/README.md).
+- The three instruments installed: [Codebase-Cartographer](../cartographer/README.md), [ClauDHD](https://github.com/kidsmeal/ClauDHD), and [Gantry](../gantry/README.md).
 
 ## License
 

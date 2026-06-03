@@ -59,8 +59,8 @@ const instruments = [
   },
   {
     name: "Codebase-Cartographer",
-    found: dirExists(skillDir) || (cacheRoot ? dirExists(path.join(cacheRoot, "codebase-cartographer")) : false),
-    hint: "cp -r public/skills/codebase-cartographer ~/.claude/skills/",
+    found: (cacheRoot ? dirExists(path.join(cacheRoot, "cartographer")) : false) || dirExists(skillDir),
+    hint: "/plugin marketplace add public/cartographer  ->  /plugin install cartographer@cartographer",
   },
 ];
 

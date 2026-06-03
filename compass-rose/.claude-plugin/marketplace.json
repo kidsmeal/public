@@ -10,8 +10,26 @@
     {
       "name": "compass",
       "source": "./plugins/compass",
-      "description": "The connective layer over Codebase-Cartographer (the chart), ClauDHD (dead reckoning), and Gantry (the dock): map-grounded design, a roadmap that is the hub, a two-lane triage with a capped quick-fixes batch, and a unified session brief. Orchestrates the three instruments; does not replace them.",
+      "description": "The connective layer over Codebase-Cartographer, ClauDHD, and Gantry: map-grounded design, a roadmap that is the hub, a two-lane triage, and a unified session brief. Declares the other three as dependencies, so installing it installs the whole workbench; orchestrates them rather than replacing them.",
       "version": "0.1.0",
+      "author": { "name": "kidsmeal" }
+    },
+    {
+      "name": "cartographer",
+      "source": { "source": "git-subdir", "url": "https://github.com/kidsmeal/public.git", "path": "cartographer/plugins/cartographer" },
+      "description": "Codebase Cartographer: documents a codebase (INDEX map, CLAUDE.md \"Where things are\" block, GLOSSARY, ROADMAP, CONVENTIONS). Also published standalone in the cartographer marketplace.",
+      "author": { "name": "kidsmeal" }
+    },
+    {
+      "name": "claudhd",
+      "source": { "source": "git-subdir", "url": "https://github.com/kidsmeal/ClauDHD.git", "path": "plugins/claudhd" },
+      "description": "ClauDHD: a NOW cursor that follows your branch, an idea inbox, a quick-fixes lane, a shipped log, and branch-aware session breadcrumbs. Also published standalone in the claudhd marketplace.",
+      "author": { "name": "kidsmeal" }
+    },
+    {
+      "name": "gantry",
+      "source": { "source": "git-subdir", "url": "https://github.com/kidsmeal/public.git", "path": "gantry/plugins/gantry" },
+      "description": "Gantry: a gated design -> plan -> build -> review pipeline with two living audit docs. Also published standalone in the gantry marketplace.",
       "author": { "name": "kidsmeal" }
     }
   ]

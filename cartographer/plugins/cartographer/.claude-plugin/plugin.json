@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "cartographer",
+  "displayName": "Codebase Cartographer",
+  "version": "0.1.0",
+  "description": "Designs and generates a codebase's organizational documentation system so an unfamiliar repo becomes navigable: an INDEX map, a CLAUDE.md \"Where things are\" block, a GLOSSARY, a ROADMAP, and a CONVENTIONS guide. Ships the codebase-cartographer skill, which reads files before writing and verifies every cited path.",
+  "author": {
+    "name": "kidsmeal",
+    "url": "https://github.com/kidsmeal"
+  },
+  "homepage": "https://github.com/kidsmeal/public/tree/main/cartographer",
+  "repository": "https://github.com/kidsmeal/public",
+  "license": "MIT",
+  "keywords": ["codebase-map", "documentation", "onboarding", "architecture", "index", "glossary", "conventions", "skill"]
+}
