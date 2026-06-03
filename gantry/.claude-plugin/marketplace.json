@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-marketplace.json",
+  "name": "gantry",
+  "owner": {
+    "name": "kidsmeal",
+    "url": "https://github.com/kidsmeal"
+  },
+  "description": "Gantry: a gated plan -> build -> review pipeline for Claude Code, plus anti-drift audits. Project-agnostic.",
+  "plugins": [
+    {
+      "name": "gantry",
+      "source": "./plugins/gantry",
+      "description": "An interactive design author plus four disciplined subagents (design-reviewer, phase-planner, implementer, phase-reviewer), driven in order by one orchestrator skill with both review gates, that turn a feature idea into reviewed, phased, never-spilling implementation. Includes a currentness audit and a runtime verification queue that keep docs honest. Reads each project's own conventions; works in any stack.",
+      "version": "0.2.0",
+      "author": { "name": "kidsmeal" }
+    }
+  ]
+}
