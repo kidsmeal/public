@@ -135,11 +135,11 @@ The roadmap row is the single source of truth for a feature's state and its link
 
 *Ideas 5, 8. A lot of real work is bigger than a quick fix but smaller than a full design.*
 
-- **D1. A middle lane — "small planned change" (idea 8).** Between the quick lane and the full Gantry lane: **design skipped, short plan required, review required, still linked to roadmap/NOW.** Triggered by `/compass:promote --small` (or `/compass:plan-small`). The triage decision function becomes explicit:
+- **D1. A middle lane — "small planned change" (idea 8).** Between the quick lane and the full Gantry lane: **design skipped, short plan required, review required, still linked to roadmap/NOW.** Triggered by `/compass:promote --small`, which writes `lane: small`; the parser and lint exempt the small lane from the design requirement. **✅ shipped.** The triage decision function:
   - open design questions / public-contract change / real ambiguity → **full lane**
   - multi-file or ordered steps, but no design questions → **small-planned lane**
   - one file, one sitting, no verification risk → **quick lane**
-- **D2. Quick-fix hard limits (idea 5).** Tighten the lane so it can't become avoidance:
+- **D2. Quick-fix hard limits (idea 5). ✅ shipped (claudhd v0.6.1).** Tighten the lane so it can't become avoidance:
   - cap at **3** (lower the current 5; expose as a `userConfig` so it's tunable). `quick.js` already enforces a cap — change the default and surface it.
   - **1 file per item**, no schema/API/public-contract change, no broad refactor — enforced at *clear* time in `quick.md`, and caught by the phase-reviewer if one sneaks into a diff. (Be honest: a script can't judge "is this a refactor"; the gate is the clear-pass rule plus review.)
   - any failed verification **promotes** the item to the small or full lane rather than lingering.
@@ -188,10 +188,10 @@ Sequenced by dependency and leverage, written in the proposed row schema as a li
   - status: in_progress
   - design: (Workstream C — verify.js + drift.js shipped & wired into doctor; C4/C5 in the skill)
   - blocked_by: —
-- [ ] Middle lane + quick-fix hard limits  <!-- id: lanes -->
-  - status: designed
-  - design: (Workstream D)
-  - blocked_by: foundation
+- [x] Middle lane + quick-fix hard limits  <!-- id: lanes -->
+  - status: done
+  - design: (Workstream D — /compass:promote --small + a lane field; claudhd cap->3 + hard rules)
+  - blocked_by: —
 - [ ] Tool-agnostic SPEC + Codex binding + worked example  <!-- id: portability -->
   - status: designing
   - design: (Workstream E — needs its own doc)

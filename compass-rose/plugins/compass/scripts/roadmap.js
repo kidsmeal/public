@@ -21,7 +21,8 @@ const path = require("path");
 
 const STATUSES = ["idea", "designing", "designed", "planning", "planned", "in_progress", "blocked", "done"];
 const PHASE_STATES = ["building", "in_review", "review_failed", "ready_to_commit", "committed"];
-const FIELD_KEYS = ["status", "active_phase", "phase_state", "idea", "design", "plan", "blocked_by"];
+const FIELD_KEYS = ["status", "active_phase", "phase_state", "lane", "idea", "design", "plan", "blocked_by"];
+const LANES = ["full", "small", "quick"]; // full = design+plan; small = plan only; quick = neither
 // Statuses at or past which a design and plan are expected to exist.
 const PLANNED_OR_LATER = ["planned", "in_progress", "done"];
 
@@ -74,6 +75,7 @@ function parseRoadmap(text) {
         status: null,
         activePhase: 0,
         phaseState: null,
+        lane: null,
         idea: null,
         design: null,
         plan: null,
@@ -104,6 +106,7 @@ function parseRoadmap(text) {
             break;
           }
           case "phase_state": { const s = clean(val); cur.phaseState = s ? s.toLowerCase() : null; break; }
+          case "lane": { const s = clean(val); cur.lane = s ? s.toLowerCase() : null; break; }
           case "idea": cur.idea = clean(val); break;
           case "design": cur.design = clean(val); break;
           case "plan": cur.plan = clean(val); break;
@@ -137,8 +140,10 @@ function lint(roadmap) {
   for (const f of roadmap.features) {
     if (f.unknownStatus) issues.push({ id: f.id, level: "warn", msg: `unknown status "${f.raw.status}"` });
     const planned = PLANNED_OR_LATER.includes(f.status);
-    if (planned && !f.design) issues.push({ id: f.id, level: "warn", msg: `status "${f.status}" but no design link` });
-    if (planned && !f.plan) issues.push({ id: f.id, level: "warn", msg: `status "${f.status}" but no plan link` });
+    const lane = f.lane || "full"; // the small lane skips design; quick skips both
+    if (f.lane && !LANES.includes(f.lane)) issues.push({ id: f.id, level: "warn", msg: `unknown lane "${f.lane}"` });
+    if (planned && lane === "full" && !f.design) issues.push({ id: f.id, level: "warn", msg: `status "${f.status}" but no design link` });
+    if (planned && lane !== "quick" && !f.plan) issues.push({ id: f.id, level: "warn", msg: `status "${f.status}" but no plan link` });
     if (f.status === "in_progress" && !f.phaseState) issues.push({ id: f.id, level: "warn", msg: "in_progress but no phase_state" });
     if (f.status === "blocked" && !f.blockedBy) issues.push({ id: f.id, level: "info", msg: "blocked but no blocked_by reason" });
   }

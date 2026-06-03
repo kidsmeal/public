@@ -4,6 +4,7 @@ The hub: what's in motion and what's next. Each row is the **single source of tr
 
 - **status:** `idea` → `designing` → `designed` → `planning` → `planned` → `in_progress` → `done` (or `blocked`)
 - **when `in_progress`:** `active_phase` (a number) + `phase_state` (`building` → `in_review` → `ready_to_commit` → `committed`)
+- **lane:** `full` (design + plan) or `small` (a short plan, no design); set by `/compass:promote`. Omit means full.
 - `/compass:advance` writes these as it drives each step, so the row stays current on its own.
 
 ## Now

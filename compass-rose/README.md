@@ -22,7 +22,7 @@ The three cover space, time, and process. Compass Rose's job is to keep them poi
 
 - **One pipeline from idea to commit.** A thought captured in `IDEAS.md` has a single, named path to a reviewed commit in `SHIPPED.md`, with a defined step between each artifact instead of a manual hand-off.
 - **A roadmap that is the hub.** `ROADMAP.md` stops being a backlog of vague intentions and becomes a registry of thought-through work: each entry links out to *its* design doc and *its* plan, and the cursor reads the active one off it.
-- **Two triage lanes.** Small, self-contained work takes ClauDHD's native quick-fixes lane (`/claudhd:quick`) and skips the conveyor; anything that needs a design or a review gate takes the full path through Gantry (`/compass:promote`). The split is one question: would it need a design or a review gate?
+- **Three lanes out of triage.** A one-file, one-sitting chore takes ClauDHD's quick lane (`/claudhd:quick`) and skips the conveyor; multi-step work with no open design questions takes the **small-planned** lane (`/compass:promote --small` — short plan + review, no design); anything with design questions or a contract change takes the **full** lane (`/compass:promote` — design → plan → review). One question routes it: does it need a *design*, just a *plan*, or *neither*?
 - **Plans grounded in the map.** Gantry's design author and planner read Cartographer's `INDEX.md` and `GLOSSARY.md` first, so a design starts oriented instead of re-deriving the layout.
 - **Conventions enforced end to end.** Cartographer *writes* `CONVENTIONS.md`; Gantry's implementer and reviewer treat that exact file as law. Compass Rose makes that handoff explicit, so the rules you documented are the rules the diff is held to.
 - **One staleness signal.** Cartographer verifies every path it cites, Gantry's currentness audit reconciles doc claims against the code, and ClauDHD flags a stale cursor and piling-up work. Compass Rose folds the three into a single "is our self-knowledge still true?" read via `/compass:status`.
@@ -36,6 +36,7 @@ A unit of work moves left to right. Durability and horizon change as it goes: th
 IDEAS.md            inbox, raw                     (ClauDHD)     capture, don't think
    │ triage
    ├─ quick lane ──► /claudhd:quick → NOW.md batch   (ClauDHD)     the not-Gantry exit
+   ├─ small lane ─► /compass:promote --small          (Gantry)      short plan + review, no design
    │
    └─ full lane
         │ /compass:promote
@@ -51,11 +52,11 @@ IDEAS.md            inbox, raw                     (ClauDHD)     capture, don't 
 ```
 
 1. **Capture.** `/claudhd:idea <text>` drops a thought into `IDEAS.md` in one line. Capture is dumb on purpose — you keep working.
-2. **Triage into a lane.** `/claudhd:triage` clears the inbox, and Compass Rose gives it two exits. The test is Gantry-shaped: *would this need a design or a review gate?* If no, it is a **quick fix** — `/claudhd:quick` lands it in a capped batch in `NOW.md`, cleared in one focused pass between threads (ClauDHD owns this lane natively). If yes, it is promoted to the **full lane**.
+2. **Triage into a lane.** `/claudhd:triage` clears the inbox into one of three lanes — the test is: does it need a *design*, just a *plan*, or *neither*? **Neither** (one file, one sitting) → `/claudhd:quick`, a capped batch in `NOW.md` cleared in one focused pass (ClauDHD-native). **Just a plan** (multi-step, no design questions) → `/compass:promote --small`. **A design** → the **full lane**, `/compass:promote`.
 3. **Design (full lane).** `/compass:promote` hands a promoted idea to Gantry's design author, which grills you through the open decisions — grounded in the map — and writes a design doc. It surfaces unmade decisions rather than guessing them.
 4. **Plan.** `/gantry:plan` turns the finalized design into four-to-seven verifiable phases, each with a file list, a verification step, and exit criteria.
-5. **Register on the roadmap.** The design and plan get a row in `ROADMAP.md` that links to both. The roadmap holds *named intents* for everything ahead and *finished blueprints* for the next one or two — design eagerly only what you are about to start.
-6. **Activate.** The active roadmap entry becomes the one thread in `NOW.md`, expanded to the next physical action. There is still only one cursor; it just points at a roadmap row.
+5. **Register on the roadmap.** Each piece of work is a row in `ROADMAP.md`. A row can start as a bare *named intent* — what it delivers, nothing designed yet — and pick up its *finished blueprints* (links to the design and the plan) whenever you design it. Going straight through the steps above attaches both at once; registering the intent first and designing it later, when you activate it, works just as well. The roadmap holds named intents for everything ahead and blueprints for whatever you've designed so far — design as far ahead as you like.
+6. **Activate.** The active roadmap entry becomes the one thread in `NOW.md`, expanded to the next physical action. There is still only one cursor; it just points at a roadmap row. If that row is still a bare named intent, activating it designs and plans it first — `/compass:advance` notices the missing design and runs promote, then stops for you.
 7. **Build, review, commit.** Gantry builds exactly one phase tests-first, reviews the uncommitted diff against the plan and conventions, and stops. You hold the commit. Then the cursor advances to the next phase, or the next roadmap entry.
 8. **Record.** `/claudhd:shipped` logs the committed work to `SHIPPED.md`, the roadmap row flips to done, and the trail back — shipped commit → phase → plan → design → roadmap row → original idea — stays walkable.
 
@@ -81,7 +82,7 @@ The three tools do the heavy lifting. Compass Rose's own job is the seams — th
 - **Map → plan.** Before Gantry's design author and planner reason about a feature, Compass Rose points them at `docs/INDEX.md` and `docs/GLOSSARY.md`, so the plan is grounded in the real layout rather than re-discovered each time.
 - **Conventions → gate.** Compass Rose records the path to the `CONVENTIONS.md` Cartographer wrote and hands it to Gantry's implementer and reviewer as the law for naming, structure, and anti-patterns — closing the loop between the rules you document and the diff you ship.
 - **Plan → roadmap → cursor.** When a design and plan are finalized, Compass Rose registers a roadmap row that links to both, and the active row is what `NOW.md` points at. The row carries structured state (`status` / `active_phase` / `phase_state`) as the single source of truth — `/compass:advance` writes it at each step; `/compass:status` and `/compass:doctor` read it. The roadmap is the load-bearing hub; the cursor is just the read-head positioned on it.
-- **Two lanes out of triage.** The quick lane is **ClauDHD-native**: `/claudhd:quick` manages a capped quick-fixes batch in `NOW.md` (overflow forces a decision, a fix that balloons is kicked back to `IDEAS.md`, and ClauDHD's session brief flags an over-cap batch as drift). Compass Rose owns the *full* lane, `/compass:promote`. The split is one question — would it need a design or a review gate? — so you stop deciding it ad hoc.
+- **Three lanes out of triage.** The **quick** lane is ClauDHD-native: `/claudhd:quick` manages a capped (3) batch in `NOW.md` — overflow forces a decision, a fix that balloons is kicked back to `IDEAS.md`. Compass Rose owns the other two: the **small-planned** lane (`/compass:promote --small` — a short plan + review, no design, `lane: small` on the row) for multi-step work with no design questions, and the **full** lane (`/compass:promote` — design → plan → review) for anything with real design questions. One question routes it — design, just a plan, or neither — so you stop deciding ad hoc.
 - **Three freshness checks → one brief.** Path verification, the currentness audit, and the drift flags are folded into a single staleness read, surfaced on demand via `/compass:status`.
 - **Unmistakable human gates.** Every control-flow command ends in one greppable gate label — `=== GATE: COMMIT REQUIRED ===`, `REVIEW FAILED`, `HUMAN DECISION REQUIRED`, `BLOCKED`, or `SAFE TO ADVANCE` — so the next required action is never buried in prose.
 
@@ -137,7 +138,7 @@ Compass Rose adds only the connective commands. The day-to-day verbs are still t
 | `/compass:init` | Bootstrap the workbench: initialize the three instruments in order and wire the seams. |
 | `/compass:status` | The unified brief — active thread, roadmap horizon, where you are in the pipeline, and one staleness read across all three tools. |
 | `/compass:doctor` | Health-check the workbench — broken doc links, orphan/missing docs, roadmap schema gaps, stale standing docs — and offer to fix the safe ones. |
-| `/compass:promote` | Take a triaged idea down the **full lane**: ground it in the map, hand it to Gantry's design author, then register the design and plan on the roadmap. |
+| `/compass:promote [--small]` | Take a triaged idea down the **full lane** (design → plan → review), or with `--small` the **small-planned lane** (plan → review, no design); register it on the roadmap. |
 | `/compass:quick` | Pointer to ClauDHD's native quick-fixes lane — forwards to `/claudhd:quick` (add a chore, or clear the batch). |
 | `/compass:advance` | Drive the active roadmap entry's next gated step (design → plan → build → review) and move the cursor when a phase ships. Stops at your decisions and commits. |
 | `/compass:version` | Print the version and best-effort confirm the three instruments are installed. |
@@ -157,7 +158,7 @@ The tools are how; this is why. Compass Rose is an opinionated way of working, a
 - **Discipline lives in the files, not in willpower.** Every gate, cursor, and audit is a Markdown file plus git, so the process survives a closed tab, a cold session, and a switched branch.
 - **One cursor, one focus.** There is always exactly one active thread. The roadmap can hold many intents; only one is live. The quick-fixes lane exists precisely so small work does not become a second cursor.
 - **Nothing reaches a commit unreviewed, and nothing commits itself.** Gantry's gates are hard stops, and the human holds every commit. Stopping mid-build always lands on a clean, reviewable boundary.
-- **Design just-in-time, register everything.** The roadmap names what is coming; you spend design effort only on what you are about to start.
+- **Design whenever, register everything.** The roadmap names what is coming; design as far ahead as ideas take you — the one-at-a-time discipline is on building, not on thinking.
 - **Honest over tidy.** The audits correct the record rather than reorganize it, and the freshness check assumes docs rot and looks for it.
 
 ## Non-goals

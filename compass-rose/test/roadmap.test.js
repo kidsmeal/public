@@ -134,3 +134,21 @@ test("lint flags planned-without-plan, unknown status, and in_progress-without-p
   assert.ok(by("weird").some((m) => /unknown status/.test(m)));
   assert.ok(by("mid").some((m) => /no phase_state/.test(m)));
 });
+
+test("the small lane skips the design requirement but still needs a plan", () => {
+  const rm = parseRoadmap([
+    "## Now",
+    "- [ ] Small change  <!-- id: small -->",
+    "  - status: planned",
+    "  - lane: small",
+    "  - plan: docs/plans/small-plan.md",
+    "- [ ] Small no plan  <!-- id: small-np -->",
+    "  - status: planned",
+    "  - lane: small",
+  ].join("\n"));
+  assert.equal(findById(rm, "small").lane, "small");
+  const by = (id) => lint(rm).filter((i) => i.id === id).map((i) => i.msg);
+  assert.equal(by("small").filter((m) => /no design/.test(m)).length, 0, "small lane shouldn't require a design");
+  assert.equal(by("small").filter((m) => /no plan/.test(m)).length, 0, "small with a plan is satisfied");
+  assert.ok(by("small-np").some((m) => /no plan link/.test(m)), "small still needs a plan");
+});
