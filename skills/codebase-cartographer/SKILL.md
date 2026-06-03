@@ -20,13 +20,23 @@ description: >-
 You are building a **navigation layer** for a codebase: a small set of documents that let an
 AI agent or a new human contributor walk into an unfamiliar repo and immediately know where
 everything is and how it fits together. The centerpiece is an **extremely detailed codebase
-map**. The other documents orbit it.
+map**; the other documents orbit it.
 
-A good navigation layer is worth more than its word count because it is read far more often
-than it is written — every future task in this repo starts by consulting it. That payoff only
-holds if it is *true*. A map with dead links and confident-but-wrong descriptions is worse
-than no map, because it spends trust it can't repay. So the prime directive is: **map the
-reality of the code as it exists right now, and verify every claim against the actual files.**
+These documents earn their keep because they are read far more often than they are written —
+and increasingly the reader is an AI agent starting from a cold context window, with no memory
+of the repo and a fixed token budget. Without a map, finding anything means re-exploring:
+globbing, grepping, opening the wrong files, re-deriving the structure on every task — and
+every one of those steps burns context. The navigation layer exists to replace that repeated
+search with a cheap lookup: front-load the structure once so each future reader loads the
+handful of tokens it takes to find an answer, not the whole codebase. That efficiency comes
+from organization — progressive disclosure, one fact in one place, precise pointers — not from
+clever tooling.
+
+The payoff only holds if the docs are *true*. A map with dead links or confident-but-wrong
+descriptions is worse than none, because the reader pays twice — once to trust it, again to
+recover when it misleads — and learns to distrust the whole file. So the prime directive is:
+**map the reality of the code as it exists right now, and verify every claim against the actual
+files.**
 
 ## What you produce
 
