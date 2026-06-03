@@ -24,10 +24,13 @@ exist, create a minimal CLAUDE.md whose first real section is this block.
 
 ```markdown
 ## Where things are
-- **Codebase map** (entry points, modules, subsystems, golden path): `docs/INDEX.md`
+- **Codebase map** — overview, entry points, golden path: `docs/INDEX.md`
+  - <deep-link the hottest systems straight to their anchor or file, e.g.>
+    combat: `docs/INDEX.md#combat` · persistence: `docs/map/persistence.md`
 - **Glossary** (domain terms & acronyms): `docs/GLOSSARY.md`
-- **Conventions** (naming, layout, idioms, anti-patterns): `docs/CONVENTIONS.md`
+- **Conventions** (naming, layout, idioms): `docs/CONVENTIONS.md`
 - **Roadmap** (active work, next up, blocked): `docs/ROADMAP.md`
+- **Build / run / test:** `docs/INDEX.md#build-run-test`  ← linked, not restated
 
 ## Critical gotchas
 - <the 3–6 things that will bite someone who doesn't know them — non-obvious build quirks,
@@ -42,6 +45,13 @@ Guidance:
   who skips everything else will still read the gotchas.
 - **Keep it a pointer table.** The moment it starts holding real explanations, those
   explanations are now duplicated and will drift. Move them into the target doc and link.
+- **Deep-link, don't just name.** Point at the exact section anchor or subsystem file a task
+  will need (`docs/INDEX.md#hero-system`), not merely the doc. This block is loaded on *every*
+  task, so a precise jump means the agent opens one slice instead of a whole document. It
+  relies on stable headings in the target — the map guide enforces those.
+- **Reference high-traffic facts, never copy them.** Build/run/test commands and the like have
+  a single home (the map); link to that anchor here instead of restating them, so the copies
+  can't drift and the reader never loads the same fact twice.
 
 ---
 

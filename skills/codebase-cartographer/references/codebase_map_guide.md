@@ -33,6 +33,8 @@ For each entry, the role line answers "why would I open this?" — not "what lan
 
 Every map has these, in this order. Omit a section only if the repo genuinely has nothing for
 it (a library may have no "entry points" in the app sense — say so rather than inventing one).
+When the map has more than a handful of sections, open it with a one-line **table of contents**
+of anchor links, so a reader can jump straight to one section instead of loading the whole file.
 
 1. **Orientation** — 2–4 sentences: what this codebase *is*, its primary language/framework, and the one-line mental model. Then how to run it.
 2. **Entry points** — every place execution begins.
@@ -49,13 +51,17 @@ it (a library may have no "entry points" in the app sense — say so rather than
 
 Use this structure. Tables are the default for inventories — they scan fast and force the
 path+role discipline. Prose is for the orientation and golden-path sections where a mental
-model matters more than a list.
+model matters more than a list. Keep the section headings stable and anchor-friendly — other
+docs (and the CLAUDE.md block) deep-link to them, so renaming a heading silently breaks those
+jumps.
 
 ```markdown
 # Codebase Map
 
 > Fast lookup for where everything lives. Update when adding or moving a system —
 > see [Keeping this current](#keeping-this-current).
+
+**Contents:** [Orientation](#orientation) · [Entry points](#entry-points) · [Architecture](#architecture-at-a-glance) · [Modules & subsystems](#modules--subsystems) · [Cross-cutting](#cross-cutting-systems) · [Data model](#data-model) · [Build/run/test](#build-run-test) · [Deeper docs](#docs--where-to-go-deeper)
 
 ## Orientation
 
@@ -178,6 +184,23 @@ point to them.
 **Build, run, test** — Exact, copy-pasteable commands. If they differ by OS, note it. This is
 the section readers use most on day one.
 
+## When the map gets big — split it
+
+One `INDEX.md` is ideal while it stays scannable. Once it grows past roughly 300–400 lines —
+usually when *Modules & subsystems* starts to dominate — a single flat file makes every reader
+load the whole codebase just to learn one corner of it. At that point, split it:
+
+- Keep `INDEX.md` as a **slim top-level directory**: orientation, entry points, the golden path, the build/run/test commands, and a *one-line-per-subsystem* table where each row links to that subsystem's own file.
+- Move each heavy subsystem's detail into `docs/map/<subsystem>.md`, structured like a Modules subsection (charter + file table) but free to go deeper.
+
+Now a reader loads the thin INDEX, sees the whole shape, and opens only the subsystem file
+their task touches — the same progressive-disclosure move the navigation layer makes
+everywhere: the always-loaded layer stays small, depth is one click away.
+
+Keep the split honest. Don't shard a small map to look tidy — below the threshold the extra
+hop costs more than it saves. And make sure the INDEX subsystem table still answers "where
+does X live?" on its own, so the common lookups never have to open the deeper file at all.
+
 ## Depth rubric
 
 The map is done when **all** of these are true. If any fails, keep going.
@@ -190,6 +213,8 @@ The map is done when **all** of these are true. If any fails, keep going.
 - [ ] Build/run/test commands are exact and were confirmed against the manifest, not assumed.
 - [ ] **Every path in the document was verified to exist.** This is non-negotiable.
 - [ ] Role lines say *why you'd open the file*, not what type it is.
+- [ ] A long map opens with a table of contents and uses stable, anchor-able headings.
+- [ ] If *Modules & subsystems* outgrew the file, the map is split into a slim INDEX + per-subsystem files rather than one oversized file.
 
 ## Common failure modes
 
