@@ -21,6 +21,7 @@ Every change below is justified against these. If a proposed feature violates on
 7. **Human gates unmistakable.** The AI must never silently advance, commit, or resolve ambiguity. Every command ends in one explicit, greppable gate label.
 8. **Tool-agnostic core, thin bindings.** The methodology, the file formats, and the deterministic scripts are portable. Only the command/hook wrappers are Claude-native. Keep that seam clean so a Codex binding is a thin layer, not a rewrite.
 9. **Ceremony proportional to the work.** The tool that fights drift must not *become* the drift. Every addition has to reduce friction on the common path, not add a new doc to maintain. When in doubt, fewer gates.
+10. **Each tool owns its axis; the connector wires, it doesn't absorb.** Cartographer owns the standing-fact docs (`INDEX`/`GLOSSARY`/`CONVENTIONS`/`ROADMAP`) and therefore owns keeping them fresh — generating, verifying, scoring staleness, and the authoring discipline. ClauDHD owns the cursor and its lanes; Gantry owns the gated build. Compass *surfaces* and *orchestrates*; it never reimplements another tool's job.
 
 ---
 
@@ -73,7 +74,7 @@ The roadmap row is the single source of truth for a feature's state and its link
 
 *Ideas 1, 2, 6, 10. Unblocks B and C.*
 
-- **A1. Ship the state model + roadmap-row schema** above as a `compass` convention, with a parser in `status.js`/`doctor` and graceful prose fallback. **[needs design]** (the parser + migration of an existing roadmap).
+- **A1. Ship the state model + roadmap-row schema** above, with a parser in `status.js`/`doctor` and graceful prose fallback. **Shared seam (principle 10):** Cartographer owns the roadmap-as-doc and the `idea`/`design`/`plan` link columns (it generates rows in the schema); Compass owns the pipeline-state columns (`status`/`active_phase`/`phase_state`) and the parser that reads and writes them. *(parser shipped — `roadmap.js`, 9 tests.)*
 - **A2. `advance` writes transitions.** Each gated step updates the row's `(status, active_phase, phase_state)` so the marker self-freshens. This is the linchpin that makes A worth doing.
 - **A3. Gate-label convention (idea 10).** Every `compass`/`gantry` command ends with exactly one greppable line:
   ```
@@ -85,7 +86,7 @@ The roadmap row is the single source of truth for a feature's state and its link
   === GATE: SAFE TO ADVANCE ===
   ```
   Unambiguous when you're tired, and machine-detectable so `status`/`doctor` can report "the last gate was X."
-- **A4. Artifact templates (idea 6).** Centralize what's missing and reference what exists. New: `roadmap-row`, `shipped-entry`, the small-plan (see D). Existing (link, don't duplicate): Gantry's `DESIGN`/`PLAN`/`CURRENTNESS_AUDIT`/`RUNTIME_VERIFICATION_QUEUE`, ClauDHD's `NOW`/`IDEAS`/`SHIPPED`. Make `cartographer` emit `ROADMAP.md` in the row schema.
+- **A4. Artifact templates (idea 6).** Each template lives with the tool that **owns** the doc — Compass does *not* centralize copies (principle 10). **Cartographer:** the `ROADMAP.md` template (now in the cartographer plugin) + the standing-doc templates. **Gantry:** `DESIGN`/`PLAN`/`CURRENTNESS_AUDIT`/`RUNTIME_VERIFICATION_QUEUE`. **ClauDHD:** `NOW`/`IDEAS`/`SHIPPED` + the `shipped-entry`. Compass only references them. Cartographer should emit `ROADMAP.md` already in the row schema.
 
 *Acceptance:* `advance` never misreads state in dogfooding; every command output ends in exactly one gate label; a fresh project's roadmap uses the schema out of the box.
 
@@ -112,17 +113,19 @@ The roadmap row is the single source of truth for a feature's state and its link
 
 ---
 
-## Workstream C — Staleness as a first-class signal *(the core conceptual addition)*
+## Workstream C — The doc-freshness engine *(mostly Cartographer, surfaced by Compass)*
 
-*Extends idea 4's "stale currentness audit" into a real engine. The pipeline constantly changes files — so it is the ideal place to detect, at the source, when a standing doc just became wrong (principles 2 & 4).*
+*Extends idea 4's "stale currentness audit" into a real engine. Staleness is fundamentally about the standing-fact docs Cartographer **owns and generates** (principle 10), so the engine lives mostly there; Compass only surfaces it and wires the diff signal. The pipeline constantly changes files — the ideal place to detect, at the source, when a standing doc just became wrong (principles 2 & 4).*
 
-- **C1. Diff-impact signal (highest leverage).** Gantry's `phase-reviewer` already reads every uncommitted diff. Extend it to emit a **Docs impact** section: scan the diff for moved/renamed/added/deleted paths and symbols that appear in `INDEX`/`GLOSSARY`/`CONVENTIONS`, and list which standing docs the change just invalidated. `advance`/`doctor`/`status` surface it. Staleness gets flagged **within one phase of being introduced**, using the diff that's already in hand. **[needs design]** (lives in the `gantry` repo; `compass` consumes it).
-- **C2. git-timestamp drift scoring.** A small script: for each standing doc (or each map section, when the map is split), count commits to the paths it describes since the doc's own last-touched commit. High count → "probably stale," flagged per-section. Mechanical, cheap, no file reading. Consumed by `status` (Q3) and `doctor`.
-- **C3. Checkable claims.** Extend `cartographer`'s existing "verify every cited path exists" to also verify cited *anchors/symbols*, and bias the generated docs toward path/symbol references over prose. The more a doc asserts things the filesystem/git can falsify, the more rot becomes a failing check instead of a silent lie.
-- **C4. Regenerate, don't maintain.** Treat the map as a **build artifact**. Give `cartographer` an incremental `--refresh` mode; have `doctor` recommend regeneration when the drift score is high. The solo-realistic answer to rot is cheap rebuild at natural checkpoints, not hand-maintenance that never happens.
-- **C5. Codify living-vs-standing.** Bake principle 2 into `cartographer`'s guidance and `compass:init`: which docs are auto-fresh vs. need refresh, and the rule to keep high-churn detail out of standing docs.
+- **C1. Diff-impact signal (highest leverage).** Gantry's `phase-reviewer` reads every uncommitted diff; extend it to emit a **Docs impact** section — scan the diff for moved/renamed/added/deleted paths and symbols that appear in `INDEX`/`GLOSSARY`/`CONVENTIONS`, and list which standing docs the change just invalidated. Flagged **within one phase of being introduced**. **owner: Gantry (reviewer) + Cartographer (what the docs claim), surfaced by Compass.** **[needs design]**
+- **C2. git-timestamp drift scoring.** For each standing doc (or each map section, when split), count commits to the paths it describes since the doc's own last-touched commit; high count → "probably stale," per-section. **owner: Cartographer** (a `drift.js` in its plugin). `doctor` already ships a *lite* version as the interim surface; the canonical per-section scorer belongs with the tool that generated the doc.
+- **C3. Checkable claims.** Extend Cartographer's existing "verify every cited path exists" to also verify cited *anchors/symbols*, and bias generated docs toward path/symbol references over prose, so rot becomes a failing check instead of a silent lie. **owner: Cartographer** (extends its generation-time verification; also a standalone `verify.js` that `doctor` can call).
+- **C4. Regenerate, don't maintain.** Treat the map as a **build artifact**: give Cartographer an incremental `--refresh` mode; `doctor` recommends regeneration when drift is high. **owner: Cartographer.**
+- **C5. Coarse-over-exhaustive + living-vs-standing authoring rules.** Bake principles 2 and 5 into how Cartographer *writes* docs (its `references/` guidance): keep high-churn detail out of standing docs; write the slow-changing structure. **owner: Cartographer** (reference-doc edits).
 
-*Acceptance:* a rename that invalidates the map is flagged at the next phase review, not discovered weeks later; `status` always has an honest "what's stale" line.
+*Compass's only part of C:* surface the signals in `status`/`doctor`, and wire C1 from the reviewer. Everything else is Cartographer gaining a small `scripts/` layer (now that it's a plugin) plus authoring-guidance edits.
+
+*Acceptance:* a rename that invalidates the map is flagged at the next phase review, not weeks later; `status` always has an honest "what's stale" line, fed by Cartographer's scorer.
 
 ---
 
@@ -179,9 +182,9 @@ Sequenced by dependency and leverage, written in the proposed row schema as a li
   - blocked_by: foundation
 
 ## Later
-- [ ] Staleness engine: diff-impact signal + drift scoring  <!-- id: staleness -->
+- [ ] Doc-freshness engine (Cartographer): drift scoring + checkable claims + refresh  <!-- id: doc-freshness -->
   - status: designing
-  - design: (Workstream C — needs its own doc)
+  - design: (Workstream C — mostly Cartographer; needs its own doc)
   - blocked_by: doctor, status-v2
 - [ ] Middle lane + quick-fix hard limits  <!-- id: lanes -->
   - status: designed
@@ -193,7 +196,7 @@ Sequenced by dependency and leverage, written in the proposed row schema as a li
   - blocked_by: lanes
 ```
 
-**Rationale for the order:** A is foundational — B and C are far more reliable once state is structured rather than inferred. B is the user's top-three and the most-felt daily value, so it comes right after the foundation. C is the highest *conceptual* win but leans on B's surfaces (`status`/`doctor`) to be visible, so it follows. D can slot in anytime after A; it's independent quality-of-life. E is last because it should freeze a stable core before binding a second tool to it.
+**Rationale for the order:** A is foundational — B and C are far more reliable once state is structured rather than inferred. B is the user's top-three and the most-felt daily value, so it comes right after the foundation. C (mostly Cartographer) is the highest *conceptual* win but leans on B's surfaces (`status`/`doctor`) to be visible, so it follows. D can slot in anytime after A; it's independent quality-of-life. E is last because it should freeze a stable core before binding a second tool to it.
 
 ---
 

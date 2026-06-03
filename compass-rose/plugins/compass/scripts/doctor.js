@@ -74,7 +74,9 @@ if (committedRows && realDirty.length) {
   add("info", committedRows + " phase(s) marked committed, but the tree has " + realDirty.length + " uncommitted change(s).", "commit them, or set phase_state back to building/in_review");
 }
 
-// --- staleness: standing docs vs code churn (Workstream C2, lite) ---
+// --- staleness: standing docs vs code churn (Workstream C2, interim lite surface) ---
+// The canonical per-section drift scorer belongs in the cartographer plugin (it
+// owns the docs it generated); this is the cheap surface doctor shows today.
 function commitsSince(rel) {
   const last = git(["log", "-1", "--format=%H", "--", rel]);
   if (!last) return null;

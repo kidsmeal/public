@@ -46,6 +46,8 @@ cartographer/
 ├── codebase-cartographer.skill              # the same skill packaged as a single installable file
 └── plugins/cartographer/
     ├── .claude-plugin/plugin.json
+    ├── templates/
+    │   └── ROADMAP.md                    # roadmap scaffold in the structured row schema (Compass-compatible)
     └── skills/codebase-cartographer/
         ├── SKILL.md                         # the skill itself (workflow + rules)
         ├── references/
