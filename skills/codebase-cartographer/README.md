@@ -5,10 +5,10 @@ A Claude Code skill that documents a codebase. Point it at a repo and it produce
 - A codebase map (`docs/INDEX.md`) — entry points, modules and subsystems with their key files, the main data flow, and the build/run/test commands.
 - A "Where things are" section wired into `CLAUDE.md` that links to the docs below.
 - A glossary (`docs/GLOSSARY.md`) of project-specific terms.
-- A roadmap (`docs/ROADMAP.md`) of active work.
+- A roadmap (`docs/ROADMAP.md`) of active work — built with you through a few quick questions, since current/next/blocked work is the one thing it can't read from the code.
 - A conventions doc (`docs/CONVENTIONS.md`) covering naming, layout, and idioms.
 
-It reads the actual files before writing anything, verifies that every path it cites exists, and won't overwrite docs you already have. You can ask for the whole set or just one piece (for example, only the codebase map).
+It reads the actual files before writing anything, verifies that every path it cites exists, and won't overwrite docs you already have. You can ask for the whole set or just one piece (for example, only the codebase map). On a large repo it splits the map into a slim index plus per-subsystem files so you only open the part you need.
 
 ## Install
 
