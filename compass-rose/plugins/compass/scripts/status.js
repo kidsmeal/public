@@ -13,6 +13,7 @@ const fs = require("fs");
 const path = require("path");
 
 const ROOT = process.env.COMPASS_PROJECT_DIR || process.env.CLAUDE_PROJECT_DIR || process.cwd();
+const { parseRoadmap, activeFeature, lint } = require("./roadmap.js");
 
 function git(args) {
   try {
@@ -63,4 +64,37 @@ for (const [label, rel] of artifacts) {
   const a = ageDays(rel);
   console.log("  [ok] " + label + " -> " + rel + (a === null ? "" : "  (" + a + "d)"));
 }
+// --- Roadmap state (the hub) ---
+const rmFile = firstExisting(["docs/ROADMAP.md", "ROADMAP.md"]);
+console.log("\nRoadmap (the hub):");
+if (!rmFile) {
+  console.log("  (no ROADMAP.md - build one with the cartographer skill)");
+} else {
+  let rm = null;
+  try { rm = parseRoadmap(fs.readFileSync(path.join(ROOT, rmFile), "utf8")); } catch { rm = null; }
+  if (!rm) {
+    console.log("  (could not read " + rmFile + ")");
+  } else if (!rm.schemaPresent) {
+    console.log("  " + rmFile + ": prose roadmap, no schema (" + rm.features.length + " item[s]) - falling back to prose.");
+  } else {
+    console.log("  file: " + rmFile + "  (" + rm.features.length + " feature[s])");
+    const active = activeFeature(rm);
+    if (active) {
+      console.log("  active: " + active.id + "  status=" + (active.status || "-") +
+        "  phase=" + active.activePhase + "/" + (active.phaseState || "-") +
+        (active.design ? "" : "  [no design]") + (active.plan ? "" : "  [no plan]"));
+    } else {
+      console.log("  active: (none in_progress or queued under Now)");
+    }
+    const next = rm.features.filter((f) => f.section && /next/i.test(f.section) && f.status !== "done").slice(0, 2);
+    if (next.length) console.log("  next: " + next.map((f) => f.id).join(", "));
+    const blocked = rm.features.filter((f) => f.status === "blocked");
+    if (blocked.length) console.log("  blocked: " + blocked.map((f) => f.id + (f.blockedBy ? " (" + f.blockedBy + ")" : "")).join(", "));
+    const done = rm.features.filter((f) => f.status === "done" || f.checked).length;
+    if (done) console.log("  done (safe to ignore): " + done + " feature[s]");
+    const issues = lint(rm);
+    if (issues.length) console.log("  lint: " + issues.map((i) => "[" + i.level + "] " + i.id + ": " + i.msg).join("; "));
+  }
+}
+
 console.log("\n(NOW/IDEAS/SHIPPED are excluded from 'real work' so a live cursor never reads as drift.)");
