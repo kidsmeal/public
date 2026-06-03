@@ -8,7 +8,7 @@ A Claude Code plugin (and standalone skill) that documents a codebase. Point it 
 - A roadmap (`docs/ROADMAP.md`) of active work — built with you through a few quick questions, since current/next/blocked work is the one thing it can't read from the code.
 - A conventions doc (`docs/CONVENTIONS.md`) covering naming, layout, and idioms.
 
-It reads the actual files before writing anything, verifies that every path it cites exists, and won't overwrite docs you already have. You can ask for the whole set or just one piece (for example, only the codebase map). On a large repo it splits the map into a slim index plus per-subsystem files so you only open the part you need.
+It reads the actual files before writing anything, verifies that every path it cites exists, and won't overwrite docs you already have. The plugin also ships freshness checks you can re-run anytime — `verify.js` re-checks that every cited path and `#anchor` still resolves, and `drift.js` scores how many commits have touched the files a doc describes since the doc was last updated — so the map fails loudly when it drifts instead of quietly going wrong. You can ask for the whole set or just one piece (for example, only the codebase map). On a large repo it splits the map into a slim index plus per-subsystem files so you only open the part you need.
 
 ## Install
 
@@ -48,6 +48,9 @@ cartographer/
     ├── .claude-plugin/plugin.json
     ├── templates/
     │   └── ROADMAP.md                    # roadmap scaffold in the structured row schema (Compass-compatible)
+    ├── scripts/
+    │   ├── verify.js                     # re-checks every cited path + #anchor still resolves
+    │   └── drift.js                      # scores how far each doc lags the code it cites (git)
     └── skills/codebase-cartographer/
         ├── SKILL.md                         # the skill itself (workflow + rules)
         ├── references/
