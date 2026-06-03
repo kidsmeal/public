@@ -13,3 +13,5 @@ This is the seam from triage to a buildable, registered plan. Do it in order, an
 5. **Hand off.** Tell me the design and plan paths and the roadmap row. Recommend `/compass:advance` to build the first phase once I make this the active thread, and offer to mark the source idea promoted (`[~]`) in `IDEAS.md`.
 
 If `$ARGUMENTS` is empty, ask which idea to promote - or read the untriaged items in `IDEAS.md` and offer them. If the project is not initialized, run `/compass:init` first. This is the heavy lane: anything small enough to skip a design or a review gate belongs in `/compass:quick` instead.
+
+End your response with exactly one gate label as the final line: `=== GATE: HUMAN DECISION REQUIRED ===` if any `[NEEDS USER DECISION]` or open design question remains, otherwise `=== GATE: SAFE TO ADVANCE ===` once the design and plan are written and the roadmap row is registered.

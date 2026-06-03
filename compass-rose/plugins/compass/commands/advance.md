@@ -12,3 +12,11 @@ Work out where in the pipeline this entry is, then drive exactly the next step t
 4. **A phase just committed:** update `NOW.md` - check off the step, write the next physical action - and tell me the next phase, or that the entry is done.
 
 You never commit, push, or advance past one phase on your own. When an entry's last phase is committed, recommend `/claudhd:shipped` to log it and offer to flip its roadmap row to done. If `NOW.md` has no active thread, show me the roadmap and ask which entry to make active.
+
+End your response with exactly one gate label as the final line, matching the outcome — so what I have to do next is unmistakable:
+
+- `=== GATE: COMMIT REQUIRED ===` — a phase passed review; it's yours to commit.
+- `=== GATE: REVIEW FAILED ===` — the review found issues; fixes go back through build.
+- `=== GATE: HUMAN DECISION REQUIRED ===` — an unresolved design question is blocking.
+- `=== GATE: BLOCKED ===` — waiting on something external.
+- `=== GATE: SAFE TO ADVANCE ===` — built and ready to review, or moved cleanly to the next step.

@@ -1,0 +1,8 @@
+{
+  "name": "compass-rose-dev",
+  "private": true,
+  "description": "Dev tooling (tests) for the Compass Rose connector plugin. Not published and not part of the installed plugin, which lives in plugins/compass and has zero dependencies.",
+  "scripts": {
+    "test": "node --test"
+  }
+}

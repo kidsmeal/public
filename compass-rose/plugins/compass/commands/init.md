@@ -11,3 +11,5 @@ The connector status is printed above. Compass Rose orchestrates the three instr
 3. Tell me the loop I now have, one line: capture an idea -> `/claudhd:quick` (small) or `/compass:promote` (real) -> `/compass:advance` per phase -> commit -> `/claudhd:shipped`. And `/compass:status` for the unified brief. The quick-fixes lane is ClauDHD-native (`/claudhd:quick`).
 
 Do not start any work. This command only reports the workbench's status.
+
+End with one gate label as the final line: `=== GATE: HUMAN DECISION REQUIRED ===` if any instrument still needs installing or a setup choice is open, otherwise `=== GATE: SAFE TO ADVANCE ===`.

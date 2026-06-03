@@ -13,3 +13,5 @@ Using the signals above plus the contents of `NOW.md` and the roadmap, give me o
 5. **One next action.** The single tiny step to make progress on the active thread right now.
 
 Read-only. Re-orient me and stop - do not start work.
+
+End by echoing the current gate as the final line — the one `/compass:advance` would hand back right now: `=== GATE: COMMIT REQUIRED ===`, `=== GATE: REVIEW FAILED ===`, `=== GATE: HUMAN DECISION REQUIRED ===`, `=== GATE: BLOCKED ===`, or `=== GATE: SAFE TO ADVANCE ===`.
