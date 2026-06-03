@@ -1,4 +1,4 @@
-# codebase-cartographer
+# Codebase Cartographer
 
 A Claude Code skill that documents a codebase. Point it at a repo and it produces:
 
