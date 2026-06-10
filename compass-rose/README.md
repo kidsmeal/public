@@ -145,7 +145,7 @@ Compass Rose adds only the connective commands. The day-to-day verbs are still t
 
 ## What runs automatically
 
-Compass Rose adds no hooks of its own. The instruments' automation keeps running untouched — ClauDHD's `Stop` checkpoint (a pure local script, zero tokens) and its `SessionStart` brief still fire, so the breadcrumb is never more than one turn behind. Compass Rose's *unified* brief — your heading, the roadmap entry it belongs to, the phase in flight, and the single staleness read — is on demand via `/compass:status`. Keeping it on demand for now means no second `SessionStart` hook competing with ClauDHD's; folding it into the session-start brief is a candidate for a later version.
+ClauDHD's `Stop` checkpoint (a pure local script, zero tokens) and its `SessionStart` brief keep running untouched — the breadcrumb is never more than one turn behind. Compass Rose adds its own `SessionStart` hook on top: at most two lines, only when a compass project is open. Line 1 is the active feature's position tuple (`status / active_phase / phase_state`). Line 2, if warranted, is one signal — blocked rows, open lint warnings, or a stale roadmap. Both hooks fire on session start; their outputs are complementary (continuity from ClauDHD, position from Compass Rose) and do not overlap. Dead silent in any repo that has no compass-managed roadmap.
 
 ## Status
 
