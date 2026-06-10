@@ -81,6 +81,58 @@ test("flags a row that appears in SHIPPED.md but is not done", () => {
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+test("flags a done row under Now as an archival note", () => {
+  const dir = mk();
+  try {
+    write(dir, "docs/ROADMAP.md", [
+      "## Now",
+      "- [x] Old thing  <!-- id: old-thing -->",
+      "  - status: done",
+      "  - design: docs/designs/old-thing.md",
+      "  - plan: docs/plans/old-thing-plan.md",
+    ].join("\n"));
+    write(dir, "docs/designs/old-thing.md", "# design");
+    write(dir, "docs/plans/old-thing-plan.md", "# plan");
+    const out = runDoctor(dir);
+    assert.match(out, /\[INFO\][\s\S]*old-thing[\s\S]*Shipped/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("does not flag a done row already under Shipped", () => {
+  const dir = mk();
+  try {
+    write(dir, "docs/ROADMAP.md", [
+      "## Now",
+      "- [ ] Active thing  <!-- id: active -->",
+      "  - status: idea",
+      "## Shipped",
+      "- [x] Old thing  <!-- id: old-thing -->",
+      "  - status: done",
+    ].join("\n"));
+    const out = runDoctor(dir);
+    assert.doesNotMatch(out, /old-thing[\s\S]*archive/i);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("warns when CURRENTNESS_AUDIT.md has unchecked Open doc flags entries", () => {
+  const dir = mk();
+  try {
+    write(dir, "docs/ROADMAP.md", "## Now\n- [ ] Thing  <!-- id: thing -->\n  - status: idea\n");
+    write(dir, "CURRENTNESS_AUDIT.md", [
+      "# Currentness Audit",
+      "",
+      "## Open doc flags",
+      "",
+      "- [ ] docs/INDEX.md: auth section outdated by login refactor (phase 2, my-feature)",
+      "- [x] docs/GLOSSARY.md: term added (phase 1, setup)",
+      "",
+      "## Rule of thumb",
+    ].join("\n"));
+    const out = runDoctor(dir);
+    assert.match(out, /\[WARN\][\s\S]*1 unchecked.*Open doc flags/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test("a clean idea-stage project reports no errors", () => {
   const dir = mk();
   try {

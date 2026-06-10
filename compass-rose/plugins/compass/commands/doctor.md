@@ -11,6 +11,6 @@ The findings above are a read-only health check of the workbench. Relay them gro
 - **Warnings** are schema gaps — a planned row with no design/plan, an unknown status.
 - **Notes** are hygiene and staleness — orphan docs, a standing doc gone stale, a missing audit.
 
-If I passed `--fix` (or ask), apply only the **safe, mechanical** fixes, and show me each diff before writing it: fill an obvious missing roadmap field, re-link an orphan doc whose name matches a row's `id`, advance a clearly-stale `status` marker, or kick off a map regeneration with the cartographer skill. Do **not** auto-resolve anything judgmental — an unresolved design decision, or whether a doc is truly obsolete — flag those for me. Never commit.
+If I passed `--fix` (or ask), apply only the **safe, mechanical** fixes, and show me each diff before writing it: fill an obvious missing roadmap field, re-link an orphan doc whose name matches a row's `id`, advance a clearly-stale `status` marker, kick off a map regeneration with the cartographer skill, or archive a done row to `## Shipped` (move the title line with its `<!-- id: ... -->` comment and all field sub-bullets intact, flip the checkbox to `[x]` if not already, create the `## Shipped` section at the bottom of `ROADMAP.md` if absent). Do **not** auto-resolve anything judgmental — an unresolved design decision, or whether a doc is truly obsolete — flag those for me. Never commit.
 
 End with one gate label as the final line: `=== GATE: HUMAN DECISION REQUIRED ===` if anything needs my call, otherwise `=== GATE: SAFE TO ADVANCE ===`.

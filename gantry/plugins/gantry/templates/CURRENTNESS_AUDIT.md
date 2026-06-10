@@ -33,6 +33,13 @@ Should not pull attention unless a bug points back here.
 |---|---|
 | <area> | <shipped / archived - keep as history> |
 
+## Open doc flags
+
+Written by the review relay when a phase diff made a standing doc stale. Cleared by `/gantry:audit`.
+Format: `- [ ] <doc path>: <one line, what the diff invalidated> (phase N, <feature or plan name>)`.
+
+(empty)
+
 ## Rule of thumb
 - Roadmap says what to do next.
 - Plans say how to do it.

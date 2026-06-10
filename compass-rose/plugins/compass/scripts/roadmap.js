@@ -156,7 +156,58 @@ function lint(roadmap) {
   return issues;
 }
 
-module.exports = { parseRoadmap, findById, activeFeature, lint, STATUSES, PHASE_STATES, FIELD_KEYS };
+// Update or append field sub-bullets for a row identified by id.
+// fields: plain object { key: value, ... } — keys from FIELD_KEYS.
+// null/undefined values are written as "—".
+// Returns the modified text with the same line endings, or null if id not found.
+function setFields(text, id, fields) {
+  const str = String(text);
+  const crlf = str.includes("\r\n");
+  const lines = str.split(/\r?\n/);
+  const eol = crlf ? "\r\n" : "\n";
+  const fieldRe = /^(\s+-\s+)([a-z_]+)(:\s*)(.*)$/;
+  const itemRe = /^- \[[ xX]\]\s+/;
+  const idRe = new RegExp("<!--\\s*id:\\s*" + String(id).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*-->", "i");
+
+  let rowIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (itemRe.test(lines[i]) && idRe.test(lines[i])) { rowIdx = i; break; }
+  }
+  if (rowIdx === -1) return null;
+
+  // Find sub-bullet extent
+  let lastFieldIdx = rowIdx;
+  let nextRowIdx = lines.length;
+  for (let i = rowIdx + 1; i < lines.length; i++) {
+    if (lines[i].trim() && /^[^ \t]/.test(lines[i])) { nextRowIdx = i; break; }
+    if (itemRe.test(lines[i])) { nextRowIdx = i; break; }
+    if (fieldRe.test(lines[i])) lastFieldIdx = i;
+  }
+
+  const updated = lines.slice();
+  const seen = new Set();
+  for (let i = rowIdx + 1; i < nextRowIdx; i++) {
+    const m = updated[i].match(fieldRe);
+    if (!m) continue;
+    const key = m[2].toLowerCase();
+    if (!Object.prototype.hasOwnProperty.call(fields, key)) continue;
+    seen.add(key);
+    const val = fields[key];
+    updated[i] = m[1] + m[2] + m[3] + (val == null ? "—" : val);
+  }
+
+  const appends = [];
+  for (const [key, val] of Object.entries(fields)) {
+    if (!seen.has(key.toLowerCase())) {
+      appends.push("  - " + key + ": " + (val == null ? "—" : val));
+    }
+  }
+  if (appends.length > 0) updated.splice(lastFieldIdx + 1, 0, ...appends);
+
+  return updated.join(eol);
+}
+
+module.exports = { parseRoadmap, findById, activeFeature, lint, setFields, STATUSES, PHASE_STATES, FIELD_KEYS };
 
 // CLI: dump parsed state for debugging / for a quick eyeball.
 if (require.main === module) {

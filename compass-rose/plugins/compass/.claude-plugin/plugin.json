@@ -4,7 +4,11 @@
   "displayName": "Compass Rose",
   "version": "0.1.0",
   "description": "A workbench and methodology that connects Codebase-Cartographer, ClauDHD, and Gantry into one idea-to-implementation pipeline. The map feeds the plan, the plan registers on the roadmap, the roadmap is what the cursor points at, and the cursor advances when a phase ships. Adds the connective commands and a two-lane triage; the three instruments keep owning their files.",
-  "dependencies": ["cartographer", "claudhd", "gantry"],
+  "dependencies": [
+    { "name": "cartographer", "version": ">=0.1.0" },
+    { "name": "claudhd", "version": ">=0.6.1" },
+    { "name": "gantry", "version": ">=0.3.0" }
+  ],
   "author": {
     "name": "kidsmeal",
     "url": "https://github.com/kidsmeal"

@@ -7,7 +7,8 @@ Update the project's currentness audit so a cold session can tell what is actual
 This is an **audit snapshot, not a reorganization**. Do not move or rewrite the old docs - correct the audit file instead.
 
 Steps:
-1. Gather the signals. Read the roadmap (`ROADMAP.md`/`NOW.md` if present), skim the plan files (`plans/*.md`, `docs/plan_*.md`, `design/*.md`), and read recent history: `git log --oneline -40`. For a large doc set, spawn an Explore subagent to map plan-file -> shipped/stale status rather than reading every file inline.
+1. **Reconcile open doc flags.** Find the `## Open doc flags` section of `CURRENTNESS_AUDIT.md`. For each `- [ ]` entry, check whether the cited doc still lags the change that flagged it: grep the doc for the invalidated claim or check git history. If the doc has since been refreshed, tick the box (`[x]`). If it is still stale, leave it open. Report how many flags were cleared and how many remain open.
+2. Gather the signals. Read the roadmap (`ROADMAP.md`/`NOW.md` if present), skim the plan files (`plans/*.md`, `docs/plan_*.md`, `design/*.md`), and read recent history: `git log --oneline -40`. For a large doc set, spawn an Explore subagent to map plan-file -> shipped/stale status rather than reading every file inline.
 2. For each significant plan or system, decide its real state from code evidence (Glob/Grep the files it claims), not from the doc's own language:
    - **Trust First** - the current anchors a session should rely on.
    - **Needs Reconciliation** - docs with mixed signals; say exactly which claims are stale and what the code shows instead.

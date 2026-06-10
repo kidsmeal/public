@@ -93,6 +93,15 @@ if (!rmFile) {
   }
 }
 
+// --- done rows outside Shipped section ---
+if (roadmap) {
+  for (const f of roadmap.features) {
+    if (f.status === "done" && f.section && !/shipped/i.test(f.section)) {
+      add("info", "roadmap[" + f.id + "]: done row in \"" + f.section + "\" - archive it to ## Shipped.", "archive to ## Shipped (doctor --fix)");
+    }
+  }
+}
+
 // --- shipped-but-not-done check ---
 // A row that appears in SHIPPED.md but whose status is not "done" is a stale marker.
 if (roadmap && exists("SHIPPED.md")) {
@@ -152,9 +161,21 @@ if (carto) {
   }
 }
 
-// --- audit docs presence ---
-if (rmFile && !firstExisting(["CURRENTNESS_AUDIT.md", "docs/CURRENTNESS_AUDIT.md"])) {
+// --- audit docs presence + open doc flags ---
+const auditFile = firstExisting(["CURRENTNESS_AUDIT.md", "docs/CURRENTNESS_AUDIT.md"]);
+if (rmFile && !auditFile) {
   add("info", "No currentness audit - nothing reconciles docs against code.", "run /gantry:init then /gantry:audit");
+} else if (auditFile) {
+  const auditText = read(auditFile);
+  const flagIdx = auditText.indexOf("## Open doc flags");
+  if (flagIdx !== -1) {
+    const nextSection = auditText.indexOf("\n## ", flagIdx + 1);
+    const section = nextSection === -1 ? auditText.slice(flagIdx) : auditText.slice(flagIdx, nextSection);
+    const open = (section.match(/^- \[ \] /gm) || []).length;
+    if (open > 0) {
+      add("warn", open + " unchecked " + (open === 1 ? "entry" : "entries") + " in CURRENTNESS_AUDIT.md Open doc flags.", "run /gantry:audit to reconcile");
+    }
+  }
 }
 if (rmFile && !firstExisting(["RUNTIME_VERIFICATION_QUEUE.md", "docs/RUNTIME_VERIFICATION_QUEUE.md"])) {
   add("info", "No runtime verification queue.", "run /gantry:init then /gantry:verify");

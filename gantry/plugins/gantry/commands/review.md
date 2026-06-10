@@ -9,6 +9,6 @@ Spawn the **phase-reviewer** subagent (read-only) to review the current uncommit
 
 If either argument is missing, ask me.
 
-Relay the agent's verdict verbatim - PASS / FAIL / PASS-WITH-NOTES - and its specific findings, including the Docs impact section listing any standing docs (`docs/INDEX.md`, `docs/GLOSSARY.md`, `docs/CONVENTIONS.md`) the diff made stale. Stale docs flagged here must be refreshed this phase.
+Relay the agent's verdict verbatim - PASS / FAIL / PASS-WITH-NOTES - and its specific findings, including the Docs impact section listing any standing docs (`docs/INDEX.md`, `docs/GLOSSARY.md`, `docs/CONVENTIONS.md`) the diff made stale. Stale docs flagged here must be refreshed this phase. If the Docs impact section is non-empty, append each flagged doc to `CURRENTNESS_AUDIT.md`'s `## Open doc flags` section: `- [ ] <doc path>: <one line, what the diff invalidated> (phase N, <feature or plan name>)`; if no audit file exists, skip and note that `/gantry:init` would enable it.
 - On **FAIL**: do not commit. Offer to send the Required fixes back through `/gantry:build $1 $2`, or to fix them directly.
 - On **PASS** or **PASS-WITH-NOTES**: tell me it is safe to commit and let me gate the commit. Never commit on my behalf unless I explicitly say so.
