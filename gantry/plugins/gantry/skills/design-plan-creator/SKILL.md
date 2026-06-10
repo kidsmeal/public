@@ -1,7 +1,7 @@
 ---
 name: design-plan-creator
 description: Use when the user wants to design or spec a new feature before building it - phrases like "let's design a cookbook menu", "let's build/add X", "design this feature", "spec this out", "write a design doc / design plan for X", "draft a design", or the /gantry:draft command. Runs a grounded grill: it interrogates the open decisions one branch at a time, resolving each against the real codebase, then writes a buildable design doc the design-reviewer and phase-planner consume. Authors the design only; it never writes code or plans phases.
-version: 0.2.0
+version: 0.3.0
 ---
 
 # Design Plan Creator
@@ -15,7 +15,7 @@ Designing needs back-and-forth, so any terse / no-headers / no-bullets response 
 
 ## Stage 0 - Context load (silent, before any output)
 Read before responding:
-1. The project's convention/style files - whichever of `CLAUDE.md`, `AGENTS.md`, `CONVENTIONS.md`, `docs/CONVENTIONS.md` exist - plus the codebase map (`docs/INDEX.md` / `docs/ARCHITECTURE.md`) if present.
+1. The project's convention/style files - whichever of `CLAUDE.md`, `AGENTS.md`, `CONVENTIONS.md`, `docs/CONVENTIONS.md` exist - plus the codebase map (`docs/INDEX.md` / `docs/ARCHITECTURE.md`) and the domain glossary (`docs/GLOSSARY.md`) if present.
 2. Where designs live: detect a `design/`, `docs/design/`, or `plans/` directory; default to `design/`.
 3. The area the feature will touch. Spot-check two or three representative files there with Glob/Grep so your questions and proposals match how the code actually works. A grill grounded in the real codebase is worth ten generic ones.
 

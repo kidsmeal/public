@@ -35,10 +35,14 @@ function listMd(rel) {
 // Returns null when the plugin can't be found, and doctor falls back.
 function loadCartographerFreshness() {
   try {
-    let dir = __dirname, cache = null;
-    for (let i = 0; i < 10; i++) {
-      if (path.basename(dir) === "cache" && path.basename(path.dirname(dir)) === "plugins") { cache = dir; break; }
-      const up = path.dirname(dir); if (up === dir) break; dir = up;
+    // COMPASS_PLUGIN_CACHE overrides the cache-walk for non-standard install layouts.
+    let cache = process.env.COMPASS_PLUGIN_CACHE || null;
+    if (!cache) {
+      let dir = __dirname;
+      for (let i = 0; i < 10; i++) {
+        if (path.basename(dir) === "cache" && path.basename(path.dirname(dir)) === "plugins") { cache = dir; break; }
+        const up = path.dirname(dir); if (up === dir) break; dir = up;
+      }
     }
     if (!cache) return null;
     const base = path.join(cache, "cartographer", "cartographer");
@@ -85,6 +89,19 @@ if (!rmFile) {
     for (const file of listMd(dir)) {
       const isLinked = linked.some((l) => l === file || l.endsWith(file) || file.endsWith(l));
       if (!isLinked) add("info", "orphan doc not linked from any roadmap row: " + file, "link it from a row, or archive it");
+    }
+  }
+}
+
+// --- shipped-but-not-done check ---
+// A row that appears in SHIPPED.md but whose status is not "done" is a stale marker.
+if (roadmap && exists("SHIPPED.md")) {
+  const shippedText = read("SHIPPED.md").toLowerCase();
+  for (const f of roadmap.features) {
+    if (f.status === "done") continue;
+    const needles = [f.id, f.design, f.plan, f.name].filter(Boolean).map((s) => s.toLowerCase());
+    if (needles.some((n) => shippedText.includes(n))) {
+      add("warn", "roadmap[" + f.id + "]: appears in SHIPPED.md but row is not done (status: " + (f.status || "none") + ")", "flip the row to done, or remove it from SHIPPED.md if it was logged in error");
     }
   }
 }

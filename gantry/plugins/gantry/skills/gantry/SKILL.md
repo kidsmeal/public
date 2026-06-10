@@ -1,7 +1,7 @@
 ---
 name: gantry
 description: Use to run a feature through the full Gantry pipeline in the correct order with both review gates - phrases like "run this through gantry", "gantry pipeline", "plan and build this with reviews", "drive the gated build end to end", or the /gantry:run command. Orchestrates design-plan-creator (if needed) -> design-reviewer -> phase-planner -> per phase (implementer -> phase-reviewer, re-reviewing after any fix), pausing only at the human gates (unresolved decisions, plan blockers, every commit). Not for quick one-off edits.
-version: 0.2.0
+version: 0.3.0
 ---
 
 # Gantry pipeline orchestrator
@@ -33,12 +33,13 @@ Two reviews are built in and neither is skippable:
 For each phase, in dependency order:
 1. Spawn the **implementer** with the plan path and the phase number. Relay its report.
 2. If the implementer reports a blocker or a scope drift it could not contain: **stop**, resolve with the user, then re-run the phase or adjust the plan. Never let scope expand silently.
-3. Spawn the **phase-reviewer** with the plan path and phase number, over the uncommitted diff. Relay the verdict.
+3. Spawn the **phase-reviewer** with the plan path and phase number, over the uncommitted diff. Relay the verdict in full, including the Docs impact section — it lists standing docs (`docs/INDEX.md`, `docs/GLOSSARY.md`, `docs/CONVENTIONS.md`) the diff made stale, and those must be refreshed this phase before moving on.
 4. **Re-review loop (the second review):**
    - On **FAIL**: send the reviewer's Required fixes back to the **implementer** as a scoped fix pass on the same phase. Then spawn the **phase-reviewer again** over the new diff. Repeat until PASS or PASS-WITH-NOTES, capped at **2 fix-and-re-review cycles**. If it still fails after that, **stop** and hand it to the user with the outstanding findings - do not keep grinding.
    - Rule: any time the implementer touches code after a review, that new diff **must** be re-reviewed before the commit gate.
 5. **Commit gate:** on PASS / PASS-WITH-NOTES, present the clean diff and verdict to the user and **stop for them to commit.** Gantry never commits.
-6. After the user confirms the commit, advance to the next phase. Never start phase N+1 before phase N is reviewed and committed.
+6. After the user confirms the commit, if the project has a `ROADMAP.md` containing a row for this feature (match by the design or plan path in the row, or by `<!-- id: ... -->`), update the row's `status`, `active_phase`, and `phase_state` to match the step just completed — using the same mapping as compass advance: after build set `in_progress / N / in_review`; after a PASS review set `phase_state: ready_to_commit`; after the human commits set `phase_state: committed` then advance `active_phase` to N+1 / `phase_state: building`, or `status: done` if that was the last phase; on FAIL set `phase_state: review_failed`. If there is no roadmap or no matching row, skip silently. Gantry does not depend on compass; this is a plain file write.
+7. Advance to the next phase. Never start phase N+1 before phase N is reviewed and committed.
 
 ## The only places you stop and ask
 - An unresolved `[NEEDS USER DECISION]` from the design review.

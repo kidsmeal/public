@@ -64,7 +64,7 @@ These shape every decision below — internalize them, don't just skim.
 - **Depth where it counts.** The codebase map earns real length; satellites stay lean. A glossary nobody finishes is useless. Spend your detail budget on the map.
 - **Write for two readers at once.** An AI agent that needs exact paths and wiring, and a human who needs the mental model. Lead with the model, back it with paths.
 - **Map the product, not the workbench.** A repo usually holds files that belong to a developer's *tooling and workflow* rather than the software the repo produces — agent/AI-harness scaffolding (session-continuity files like `NOW.md`/`IDEAS.md`/breadcrumb state, assistant config, slash-command plugins), editor settings, CI scratch, smoke-test artifacts. These describe how someone *works on* the code, not how the code *works*, and they often aren't even the same from one contributor to the next. Keep them out of the subsystem inventory. The test: "would this file exist if a different developer rebuilt the same product?" If no, it's workbench. If such files are genuinely load-bearing for contributors, isolate them in a short, clearly-labeled "Developer tooling / workflow" aside — never interleaved with real modules. When you can't tell whether something is product or tooling, **raise it at the proposal checkpoint instead of silently deciding.**
-- **Write for low drift.** A standing doc rots when the code outruns it, so make rot *slow to happen and cheap to detect*: describe the **slow-changing structure** — module boundaries, data flow, entry points — not the churny detail (every file, every function), and prefer **checkable claims** — cite exact paths and `#anchors`, which the bundled `scripts/verify.js` re-checks — over prose that can quietly go wrong. Coarse and true outlives exhaustive and stale. (`scripts/drift.js` scores how far each doc has lagged the code it cites.)
+- **Write for low drift.** A standing doc rots when the code outruns it, so make rot *slow to happen and cheap to detect*: describe the **slow-changing structure** — module boundaries, data flow, entry points — not the churny detail (every file, every function), and prefer **checkable claims** — cite exact paths and `#anchors`, which the bundled `scripts/verify.js` re-checks — over prose that can quietly go wrong. Cited paths must use forward slashes; backslash paths are not machine-verified by `verify.js`. Coarse and true outlives exhaustive and stale. (`scripts/drift.js` scores how far each doc has lagged the code it cites.)
 
 ## Workflow
 
@@ -76,7 +76,9 @@ quality is decided.
 Run the bundled scanner to get a structured inventory without burning a dozen tool calls:
 
 ```
-python scripts/scan_repo.py <repo-root>
+python3 scripts/scan_repo.py <repo-root>
+# if python3 is not found, fall back to: python scripts/scan_repo.py <repo-root>
+# if neither exists, skip the scan entirely and proceed to the discovery phase — the scan is an optimization, not a prerequisite; tell the user it was skipped
 ```
 
 It reports detected languages, build/manifest files, top-level directories with file counts,

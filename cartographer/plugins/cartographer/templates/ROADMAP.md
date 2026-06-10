@@ -13,6 +13,7 @@ The hub: what's in motion and what's next. Each row is the **single source of tr
   - status: idea
   - active_phase: 0
   - phase_state: —
+  - lane: full
   - idea: IDEAS.md "where it came from"
   - design: —
   - plan: —

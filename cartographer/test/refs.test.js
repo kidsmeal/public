@@ -25,3 +25,13 @@ test("records the source line number", () => {
   const r = extractRefs("line one\nsee `a/b.md` here\n").find((x) => x.kind === "code-path");
   assert.equal(r.line, 2);
 });
+
+test("does not extract a path inside a fenced code block", () => {
+  const text = "```\nsrc/app.js\n```\n";
+  assert.equal(extractRefs(text).filter((r) => r.kind === "code-path").length, 0, "path inside fence should not be extracted");
+});
+
+test("extracts the same path when it appears inline in backticks outside a fence", () => {
+  const text = "See `src/app.js` for details.\n";
+  assert.ok(extractRefs(text).some((r) => r.kind === "code-path" && r.path === "src/app.js"), "inline code-path should be extracted");
+});

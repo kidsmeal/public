@@ -32,8 +32,13 @@ function looksLikePath(s) {
 function extractRefs(text) {
   const refs = [];
   const lines = String(text || "").split(/\r?\n/);
+  let inFence = false;
   for (let n = 0; n < lines.length; n++) {
     const line = lines[n];
+    // Track fenced code blocks (``` or ~~~, with optional language tag). Paths
+    // inside fences are examples, not live citations — skip extraction there.
+    if (/^\s*(```|~~~)/.test(line)) { inFence = !inFence; continue; }
+    if (inFence) continue;
     let m;
     LINK_RE.lastIndex = 0;
     while ((m = LINK_RE.exec(line))) {

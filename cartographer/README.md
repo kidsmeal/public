@@ -24,7 +24,7 @@ git clone https://github.com/kidsmeal/public.git
 
 It is also bundled with Compass Rose — installing `compass@compass-rose` pulls Cartographer in as a dependency (see [compass-rose](../compass-rose/README.md)).
 
-**2. As a single-file skill.** Download [`codebase-cartographer.skill`](codebase-cartographer.skill) and install it in Claude Code's skill installer — no plugin needed.
+**2. As a single-file skill.** Download [`codebase-cartographer.skill`](codebase-cartographer.skill) and install it in Claude Code's skill installer — no plugin needed. The canonical form is the plugin directory at `plugins/cartographer/skills/codebase-cartographer/`; the `.skill` is a generated artifact. To regenerate it after editing the plugin, run `node tools/build-skill.js` from the `cartographer/` directory (requires Python 3, already needed for `scan_repo.py`).
 
 Either way, restart Claude Code (or run `/reload-plugins`) so it picks the skill up.
 

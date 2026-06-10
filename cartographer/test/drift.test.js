@@ -52,6 +52,19 @@ test("does not count commits to files the doc does not cite", () => {
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+test("ROADMAP.md citing an existing file appears in the drift results", () => {
+  const dir = mkRepo();
+  try {
+    w(dir, "src/app.js", "v1");
+    w(dir, "ROADMAP.md", "# Roadmap\nSee `src/app.js`.\n");
+    commit(dir, "init");
+    w(dir, "src/app.js", "v2"); commit(dir, "change app");
+    const r = driftScores(dir).results.find((x) => x.doc === "ROADMAP.md");
+    assert.ok(r, "ROADMAP.md should appear in drift results");
+    assert.equal(r.score, 1, "one commit touched the cited file since the doc");
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test("flags stale once the score crosses the threshold", () => {
   const dir = mkRepo();
   try {

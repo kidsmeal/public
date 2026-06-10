@@ -81,6 +81,7 @@ function parseRoadmap(text) {
         plan: null,
         blockedBy: null,
         unknownStatus: false,
+        unknownPhaseState: false,
         raw: {},
       };
       continue;
@@ -105,7 +106,11 @@ function parseRoadmap(text) {
             cur.activePhase = Number.isFinite(n) ? n : 0;
             break;
           }
-          case "phase_state": { const s = clean(val); cur.phaseState = s ? s.toLowerCase() : null; break; }
+          case "phase_state": {
+            const s = clean(val); cur.phaseState = s ? s.toLowerCase() : null;
+            if (cur.phaseState && !PHASE_STATES.includes(cur.phaseState)) cur.unknownPhaseState = true;
+            break;
+          }
           case "lane": { const s = clean(val); cur.lane = s ? s.toLowerCase() : null; break; }
           case "idea": cur.idea = clean(val); break;
           case "design": cur.design = clean(val); break;
@@ -139,6 +144,7 @@ function lint(roadmap) {
   const issues = [];
   for (const f of roadmap.features) {
     if (f.unknownStatus) issues.push({ id: f.id, level: "warn", msg: `unknown status "${f.raw.status}"` });
+    if (f.unknownPhaseState) issues.push({ id: f.id, level: "warn", msg: `unknown phase_state "${f.raw.phase_state}"` });
     const planned = PLANNED_OR_LATER.includes(f.status);
     const lane = f.lane || "full"; // the small lane skips design; quick skips both
     if (f.lane && !LANES.includes(f.lane)) issues.push({ id: f.id, level: "warn", msg: `unknown lane "${f.lane}"` });

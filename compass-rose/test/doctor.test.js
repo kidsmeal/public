@@ -62,6 +62,25 @@ test("flags an orphan plan and stops flagging links once the files exist", () =>
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+test("flags a row that appears in SHIPPED.md but is not done", () => {
+  const dir = mk();
+  try {
+    write(dir, "docs/ROADMAP.md", [
+      "## Now",
+      "- [ ] My feature  <!-- id: my-feature -->",
+      "  - status: in_progress",
+      "  - design: docs/designs/my-feature.md",
+      "  - plan: docs/plans/my-feature-plan.md",
+      "  - phase_state: building",
+    ].join("\n"));
+    write(dir, "docs/designs/my-feature.md", "# design");
+    write(dir, "docs/plans/my-feature-plan.md", "# plan");
+    write(dir, "SHIPPED.md", "### 2026-06-01\n- my-feature shipped\n");
+    const out = runDoctor(dir);
+    assert.match(out, /\[WARN\][\s\S]*my-feature[\s\S]*SHIPPED\.md[\s\S]*not done/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test("a clean idea-stage project reports no errors", () => {
   const dir = mk();
   try {

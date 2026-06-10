@@ -23,7 +23,7 @@ const DEFAULT_THRESHOLD = tIdx !== -1 && args[tIdx + 1] ? parseInt(args[tIdx + 1
 
 const DOC_CANDIDATES = [
   "docs/INDEX.md", "INDEX.md", "docs/GLOSSARY.md", "GLOSSARY.md",
-  "docs/CONVENTIONS.md", "CONVENTIONS.md", "CLAUDE.md",
+  "docs/CONVENTIONS.md", "CONVENTIONS.md", "docs/ROADMAP.md", "ROADMAP.md", "CLAUDE.md",
 ];
 
 function git(root, a) {

@@ -22,7 +22,7 @@ function firstExisting(cands) { return cands.find(exists) || null; }
 // Per-instrument artifacts in this project.
 const map = firstExisting(["docs/INDEX.md", "INDEX.md"]);
 const roadmap = firstExisting(["docs/ROADMAP.md", "ROADMAP.md"]);
-const conventions = firstExisting(["CONVENTIONS.md", "docs/CONVENTIONS.md", "AGENTS.md", "CLAUDE.md"]);
+const conventions = firstExisting(["CONVENTIONS.md", "docs/CONVENTIONS.md"]);
 const glossary = firstExisting(["docs/GLOSSARY.md", "GLOSSARY.md"]);
 const now = exists("NOW.md");
 const audit = firstExisting(["CURRENTNESS_AUDIT.md", "docs/CURRENTNESS_AUDIT.md"]);

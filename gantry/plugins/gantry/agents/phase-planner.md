@@ -17,7 +17,7 @@ If no design doc path is given, stop and ask for one. Do not invent a design.
 1. The design doc, end to end, before planning anything.
 2. The project's convention and style files. These define naming, structure, contracts, and anti-patterns the plan must respect. Look for and read whichever exist:
    - `CLAUDE.md`, `AGENTS.md`, `CONVENTIONS.md`, `CONTRIBUTING.md`, `STYLE.md`
-   - `docs/CONVENTIONS.md`, `docs/INDEX.md`, `docs/ARCHITECTURE.md`
+   - `docs/CONVENTIONS.md`, `docs/INDEX.md`, `docs/ARCHITECTURE.md`, `docs/GLOSSARY.md`
    If none exist, infer conventions from a representative sample of the codebase (a few sibling files in the area you are planning) and say in the plan that you did so.
 3. Spot-check the codebase for the systems the design touches. Confirm the files the design references actually exist, and note the current state of the integration points you will modify. Use Glob/Grep, not guesses.
 

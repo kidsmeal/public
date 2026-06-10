@@ -135,6 +135,25 @@ test("lint flags planned-without-plan, unknown status, and in_progress-without-p
   assert.ok(by("mid").some((m) => /no phase_state/.test(m)));
 });
 
+test("lint flags unknown phase_state and does not flag a valid one", () => {
+  const rm = parseRoadmap([
+    "## Now",
+    "- [ ] Bad state  <!-- id: bad-state -->",
+    "  - status: in_progress",
+    "  - phase_state: frobnicate",
+    "  - design: d.md",
+    "  - plan: p.md",
+    "- [ ] Good state  <!-- id: good-state -->",
+    "  - status: in_progress",
+    "  - phase_state: in_review",
+    "  - design: d.md",
+    "  - plan: p.md",
+  ].join("\n"));
+  const by = (id) => lint(rm).filter((i) => i.id === id).map((i) => i.msg);
+  assert.ok(by("bad-state").some((m) => /unknown phase_state/.test(m)), "unknown phase_state should be flagged");
+  assert.equal(by("good-state").filter((m) => /unknown phase_state/.test(m)).length, 0, "valid phase_state should not be flagged");
+});
+
 test("the small lane skips the design requirement but still needs a plan", () => {
   const rm = parseRoadmap([
     "## Now",

@@ -1,0 +1,7 @@
+{
+  "name": "gantry",
+  "private": true,
+  "scripts": {
+    "test": "node --test"
+  }
+}

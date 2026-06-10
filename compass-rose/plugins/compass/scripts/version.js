@@ -32,7 +32,9 @@ function dirExists(p) {
 
 // Walk up from here looking for the ".../plugins/cache" directory that holds the
 // sibling plugins. Returns null when running from a layout we don't recognize.
+// COMPASS_PLUGIN_CACHE overrides the walk for non-standard install layouts.
 function findCacheRoot(start) {
+  if (process.env.COMPASS_PLUGIN_CACHE) return process.env.COMPASS_PLUGIN_CACHE;
   let dir = start;
   for (let i = 0; i < 10; i++) {
     if (path.basename(dir) === "cache" && path.basename(path.dirname(dir)) === "plugins") return dir;
