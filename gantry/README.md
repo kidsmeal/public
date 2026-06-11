@@ -40,7 +40,7 @@ You can also skip the plugin system entirely and copy `plugins/gantry/agents/`, 
 /gantry:version
 ```
 
-You should see a line like `Gantry v0.3.0`. If the command isn't recognized, the plugin didn't load. Run `/reload-plugins` (or restart Claude Code) and try again.
+You should see a line like `Gantry v0.4.0`. If the command isn't recognized, the plugin didn't load. Run `/reload-plugins` (or restart Claude Code) and try again.
 
 ### 3. Initialize a project
 
