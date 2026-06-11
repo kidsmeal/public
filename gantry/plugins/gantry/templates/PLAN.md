@@ -10,8 +10,9 @@ Verification command(s): <the project's test/build commands the implementer will
 <unresolved design decisions - resolve these before phase 1 starts.>
 
 ## Phase 1: <name>
+**Status:** pending <!-- pending | built | in review | review failed | ready to commit | committed. Updated by the relay at each transition, never by the implementer. -->
 **Goal:** <one sentence.>
-**Files:** <concrete paths created/modified.>
+**Files:** <concrete paths created/modified, including the test files Verification names.>
 **Verification:** <which test to add/extend, or a manual check with a clear pass condition.>
 **Exit criteria:** <what "done" looks like before phase 2 starts.>
 **Blockers:** <anything the design left unresolved for this phase, or "none".>

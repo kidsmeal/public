@@ -24,6 +24,13 @@ If either is missing, stop and ask. Do not guess which phase to do.
 8. Re-check each Exit criterion line by line. Every criterion must be verifiably met before you report done.
 9. If the project keeps generated code (codegen, ORM, protobuf, build_runner-style output), and this phase changed annotated/source-of-truth files, run the regeneration step the conventions specify. Never hand-edit generated files.
 
+## Fix mode
+When the caller passes reviewer findings (Required fixes or Fix-now notes) alongside the plan path and phase number, you are in fix mode, not a fresh build:
+1. Apply **only** the listed fixes. The findings' cited file:line locations replace the plan's Files list as your scope boundary - a cited location is authorized even if the original Files list omitted it, and nothing uncited is.
+2. Do not re-run the tests-first sequence from scratch. If a fix changes behavior a test covers, update that test to match the corrected behavior; never weaken or delete it to make the fix pass.
+3. No new scope, no cleanup beyond the findings, no reinterpreting the phase. If a finding cannot be fixed without a design decision the plan never made, stop and report it as a blocker instead of improvising.
+4. Re-run the phase's verification, then report in the same format below, listing each finding as fixed / blocked with one line of evidence.
+
 ## Output
 A short report:
 - Phase implemented (number + name).

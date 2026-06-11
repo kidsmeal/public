@@ -1,6 +1,6 @@
 ---
 description: Scaffold Gantry's living docs into this project and detect its conventions + test/build commands
-allowed-tools: Bash(node:*), Read, Edit
+allowed-tools: Bash(node:*), Read
 ---
 !`node "${CLAUDE_PLUGIN_ROOT}/scripts/init.js"`
 

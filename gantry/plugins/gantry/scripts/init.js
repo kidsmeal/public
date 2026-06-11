@@ -66,16 +66,26 @@ if (exists("pubspec.yaml")) add("Dart/Flutter", "flutter test", "flutter build /
 if (exists("package.json")) {
   let scripts = {};
   try { scripts = (JSON.parse(read("package.json")).scripts) || {}; } catch { /* ignore */ }
-  const t = scripts.test ? "npm test" : "(no \"test\" script in package.json)";
-  const b = scripts.build ? "npm run build" : (scripts.lint ? "npm run lint" : "(no build/lint script)");
-  add("Node/JS", t, b);
+  const pm = exists("pnpm-lock.yaml") ? "pnpm"
+    : exists("yarn.lock") ? "yarn"
+    : (exists("bun.lockb") || exists("bun.lock")) ? "bun"
+    : "npm";
+  const t = scripts.test ? pm + " test" : "(no \"test\" script in package.json)";
+  const b = scripts.build ? pm + " run build" : (scripts.lint ? pm + " run lint" : "(no build/lint script)");
+  add("Node/JS (" + pm + ")", t, b);
 }
 if (exists("Cargo.toml")) add("Rust", "cargo test", "cargo build && cargo clippy");
 if (exists("go.mod")) add("Go", "go test ./...", "go build ./... && go vet ./...");
 if (exists("pyproject.toml") || exists("setup.py") || exists("requirements.txt"))
   add("Python", exists("pytest.ini") || exists("tests") ? "pytest" : "pytest (no tests/ dir found)", "ruff check / mypy (if configured)");
 if (exists("project.godot")) add("Godot", "GdUnit4 (godot --headless -s addons/gdUnit4/...)", "godot --headless --check-only");
-if (exists("go.mod") === false && exists("Gemfile")) add("Ruby", "bundle exec rspec", "rubocop");
+if (exists("Gemfile")) add("Ruby", "bundle exec rspec", "rubocop");
+if (exists("pom.xml")) add("Java/Kotlin (Maven)", "mvn test", "mvn package");
+if (exists("build.gradle") || exists("build.gradle.kts") || exists("settings.gradle") || exists("settings.gradle.kts")) {
+  const gw = exists("gradlew") ? "./gradlew" : "gradle";
+  add("Java/Kotlin (Gradle)", gw + " test", gw + " build");
+}
+if (exists("CMakeLists.txt")) add("C/C++ (CMake)", "ctest --test-dir build", "cmake --build build");
 const csproj = git(["ls-files", "*.csproj"]);
 if (csproj) add(".NET", "dotnet test", "dotnet build");
 

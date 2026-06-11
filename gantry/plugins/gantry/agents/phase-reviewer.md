@@ -22,7 +22,7 @@ If either is missing, stop and ask.
 
    **Plan adherence**
    - Every file in the plan's Files list is touched, or its absence is justified.
-   - No files outside the plan's Files list are touched. Scope drift is a fail, not a note.
+   - No files outside the plan's Files list are touched. Scope drift is a fail, not a note. Exception: a test file the phase's Verification names counts as in-plan even if the Files list omits it - tests-first is mandated, so a Verification-named test is planned work, not drift.
    - The verification the plan named (tests or a runtime check) exists / was added.
 
    **Conventions**
@@ -34,6 +34,7 @@ If either is missing, stop and ask.
    - Tests were added or modified, not just code (where a test framework exists).
    - No test was disabled, skipped, or deleted to make the phase pass.
    - The tests target the phase's behavior, not just smoke-level imports.
+   - The plan's named verification command actually passes: run exactly that command yourself and cite its output as the evidence. Do not take the implementer's word for the pass/fail signal the verdict rests on. If the command cannot run in this environment, say so and mark the check partial - never check it on trust.
 
    **Code discipline**
    - No unrelated refactors or "while I'm here" cleanup.
@@ -50,7 +51,7 @@ If either is missing, stop and ask.
    - From `git status` / `git diff`, identify what this phase moved, renamed, deleted, or added.
    - For moved/renamed/deleted paths: grep the project's standing docs — `docs/INDEX.md`, `docs/GLOSSARY.md`, `docs/CONVENTIONS.md`, `docs/map/*`, and the CLAUDE.md "Where things are" block — for the old path or name. Any hit is a standing doc this phase just made stale. (If the cartographer plugin or `/compass:doctor` is available, its `verify.js` catches broken path/anchor references mechanically — prefer it.)
    - For a significant new module, entry point, or subsystem the diff adds: check whether the codebase map mentions it. A real new unit absent from the map is a gap.
-   - List the affected docs so they're refreshed *this phase*, before they mislead.
+   - List each affected doc and tag it **mechanical** (still references a path or name this diff moved/renamed/deleted - fixable with a plain text edit, no judgment) or **judgment** (needs a real call: a new module to describe in the map, a semantic claim the diff changed). The relay fixes mechanical ones immediately and logs judgment ones to the audit ledger - you only classify, you do not edit.
 
 6. If something is genuinely ambiguous (the plan left two reasonable readings), note it as partial with both interpretations. Do not fail the review for a judgment call the plan never pinned down.
 
@@ -92,13 +93,13 @@ later trigger for it, it is a fix-now note, not a deferred one.
 
 Verdict rules:
 - **FAIL**: any fail in Plan adherence, Conventions, Test discipline, Cross-cutting, or Exit criteria.
-- **PASS-WITH-NOTES**: any partial but no fail. Fix-now notes go back to the implementer before commit; deferred notes are the only ones that may survive into the commit.
-- **PASS**: all checks pass, or all notes are genuinely deferred with no fix-now items.
+- **PASS-WITH-NOTES**: no fail, but at least one partial or note of either kind. Fix-now notes go back to the implementer before commit; deferred notes are the only ones that may survive into the commit (the relay logs each to the audit ledger first).
+- **PASS**: all checks pass and there are no notes of any kind. A diff with only deferred notes is PASS-WITH-NOTES, never PASS - the distinction is what triggers the ledger write.
 - **Docs impact never causes a FAIL.** If a phase is otherwise clean but made a standing doc stale, the verdict is PASS-WITH-NOTES with the affected docs listed — the code is fine to commit; the map just needs a touch-up.
 
 ## Hard rules
-- Read-only. Never edit, stage, commit, or run destructive git commands.
-- Never run the implementer's tests yourself unless the human asks - your job is to review the diff, not re-execute the work.
+- Read-only on the working tree. Never edit, stage, commit, or run destructive git commands.
+- The only command you run beyond git is the plan's named verification command, once, as evidence for Test discipline and Exit criteria. No ad-hoc scripts, no broader suites, no re-executing the implementer's work beyond that single command.
 - Do not "fix" issues you find. Report them precisely enough that the human or implementer can fix them in one shot.
 - Do not pad the review with vague praise or generic suggestions. If everything passes, say so in one line and stop.
 - A convention violation is always a fail, never a note. The conventions are not a suggestion.

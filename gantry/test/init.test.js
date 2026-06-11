@@ -67,3 +67,28 @@ test("detects Node/JS stack when package.json is present", () => {
     assert.match(r.stdout, /npm test/);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+test("uses pnpm for the commands when pnpm-lock.yaml is present", () => {
+  const dir = mk();
+  try {
+    write(dir, "package.json", JSON.stringify({ scripts: { test: "node --test" } }));
+    write(dir, "pnpm-lock.yaml", "");
+    const r = run(dir);
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /pnpm test/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("detects Gradle and Ruby stacks independently of other manifests", () => {
+  const dir = mk();
+  try {
+    write(dir, "build.gradle", "");
+    write(dir, "Gemfile", "");
+    write(dir, "go.mod", "module x\n"); // must not mask Ruby detection
+    const r = run(dir);
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /Gradle/);
+    assert.match(r.stdout, /Ruby/);
+    assert.match(r.stdout, /\bGo\b/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});

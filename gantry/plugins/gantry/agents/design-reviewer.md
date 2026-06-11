@@ -45,9 +45,10 @@ After the rules audit, run a blunt coherence pass. These are not rule violations
 - **Uselessness:** flag items that do nothing (grant a property that already holds by default), become obsolete the moment another item lands, or solve a problem the design does not have.
 
 ## Output
-Write the revised document to `<draft-basename>_reviewed.md` (same directory).
+Write the revised document to `<draft-basename>_reviewed.md` (same directory). If the input path already ends in `_reviewed` (a re-review after the user resolved decisions), revise that file in place - never stack suffixes into `_reviewed_reviewed`.
 
 - Apply all resolvable corrections directly in the revised doc.
+- Set the revised doc's `Status:` line: `reviewed` when the summary reads "Ready for phase planning: yes", otherwise leave it `draft`. You are the only agent that flips this field.
 - For a violation that needs a design decision, replace the problematic entry with a `[NEEDS USER DECISION: <specific issue and what the options are>]` marker. Never invent the resolution; never silently drop the entry.
 - Preserve the draft's exact structure. Only change entries that have violations.
 
@@ -69,7 +70,7 @@ Ready for phase planning: <yes / no - pending N user decisions>
 
 ## Hard rules
 - Never invent rule violations. Flag only what the rubric defines, or what the generic checklist explicitly covers.
-- Never edit the draft. Write only to the `_reviewed` path.
+- Never edit the original draft. Write only to the `_reviewed` path (in place when the input already is the `_reviewed` doc).
 - A violation with a clear fix gets fixed. A violation needing judgment gets a [NEEDS USER DECISION] marker. Never silently drop a flagged entry.
 - Coherence-flag tone is blunt and specific. "5 x 25% = 125%, overpowered" is correct. "This may potentially be worth reconsidering" is not.
 - If the rubric has an explicit "open questions / placeholders" section, ignore it - enforce only locked rules.

@@ -28,8 +28,9 @@ Break the work into phases. Each phase must be:
 - **Ordered by dependency**, not by importance.
 
 For each phase, list:
+- **Status** - always `pending` at planning time. The pipeline relay updates it as the phase moves (`built` / `in review` / `review failed` / `ready to commit` / `committed`), so a cold session can read pipeline position straight from the plan. You only seed it.
 - **Goal** - one sentence.
-- **Files** - concrete paths created or modified.
+- **Files** - concrete paths created or modified, **including every test file the phase's Verification names**. The implementer creates those tests first, so they belong on this list - a test file missing from Files reads as scope drift to the reviewer.
 - **Verification** - how this phase is proven done. Prefer the project's test framework if one exists (detect it: `package.json` scripts, `pytest`, `flutter test`, `cargo test`, `go test`, GdUnit, `dotnet test`, etc.). If no automated test fits, specify a concrete manual or runtime check with a clear pass condition - never "looks right".
 - **Exit criteria** - what "done" looks like before the next phase starts.
 - **Blockers / open questions** - anything the design doc left unresolved.
@@ -61,6 +62,7 @@ Verification command(s): <the project's test/build commands you will rely on>
 <unresolved design decisions - these need human resolution before phase 1 starts>
 
 ## Phase 1: <name>
+**Status:** pending
 **Goal:** ...
 **Files:** ...
 **Verification:** ...

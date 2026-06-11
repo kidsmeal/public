@@ -9,4 +9,4 @@ Spawn the **implementer** subagent to implement exactly ONE phase.
 
 If either argument is missing, ask me - do not guess the phase.
 
-The implementer works tests-first (where a test framework exists), stays inside the plan's file list, will not commit, and will not advance past the one phase. When it returns, relay its report verbatim: files changed, test status, each exit criterion, scope drift, and any blockers it hit. Then stop and recommend `/gantry:review $1 $2` before I commit. Do not start the next phase, and do not commit.
+The implementer works tests-first (where a test framework exists), stays inside the plan's file list, will not commit, and will not advance past the one phase. When it returns, relay its report verbatim: files changed, test status, each exit criterion, scope drift, and any blockers it hit. Set the phase's `**Status:**` line in the plan to `built` (the implementer never edits the plan; you do). Then stop and recommend `/gantry:review $1 $2` before I commit. Do not start the next phase, and do not commit.
