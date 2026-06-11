@@ -82,9 +82,12 @@ that are addressable without design decisions. The implementer will fix these be
 
 ## Deferred notes (if PASS-WITH-NOTES)
 Issues that genuinely cannot be resolved this phase: pending external APIs, balance-pass values
-explicitly called out as placeholders in the plan, follow-up features the design pre-decided to
-ship without. These survive into the commit unchanged.
-1. <reason it is genuinely deferred, with reference to the plan or design decision>
+explicitly called out as placeholders in the plan, follow-up consumers a later phase will wire.
+These survive into the commit unchanged — but the relay logs each one to the project's deferred-note
+ledger, so a deferred note is a tracked backlog item, not a dropped one. Make each note specific
+enough to act on cold: a file:line and the precise reason it waits. If you cannot name a concrete
+later trigger for it, it is a fix-now note, not a deferred one.
+1. <note, with file:line> — <why it waits, and the phase/feature that will clear it>
 ```
 
 Verdict rules:

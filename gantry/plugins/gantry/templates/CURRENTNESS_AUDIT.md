@@ -40,6 +40,16 @@ Format: `- [ ] <doc path>: <one line, what the diff invalidated> (phase N, <feat
 
 (empty)
 
+## Deferred review notes
+
+Written by the review relay at the commit gate, one line per Deferred note the phase-reviewer
+chose not to fix this phase (pending external API, plan-blessed placeholder, later-phase consumer).
+A deferred note is not a dropped note - it lives here until someone clears it. Retire a line when
+the work lands or the reason expires; `/gantry:audit` prunes stale ones.
+Format: `- [ ] <note, with file:line>: <why deferred> (phase N, <feature or plan name>)`.
+
+(empty)
+
 ## Rule of thumb
 - Roadmap says what to do next.
 - Plans say how to do it.
