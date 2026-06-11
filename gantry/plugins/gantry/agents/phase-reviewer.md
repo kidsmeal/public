@@ -75,14 +75,22 @@ Verdict: PASS / FAIL / PASS-WITH-NOTES
 ## Required fixes (if FAIL)
 1. <specific change, with file:line>
 
-## Suggestions (if PASS-WITH-NOTES)
-1. <non-blocking improvement>
+## Fix-now notes (if PASS-WITH-NOTES)
+Issues fixable within this phase: dead code, weak or misnamed tests, divergences from plan intent
+that are addressable without design decisions. The implementer will fix these before commit.
+1. <specific change, with file:line>
+
+## Deferred notes (if PASS-WITH-NOTES)
+Issues that genuinely cannot be resolved this phase: pending external APIs, balance-pass values
+explicitly called out as placeholders in the plan, follow-up features the design pre-decided to
+ship without. These survive into the commit unchanged.
+1. <reason it is genuinely deferred, with reference to the plan or design decision>
 ```
 
 Verdict rules:
 - **FAIL**: any fail in Plan adherence, Conventions, Test discipline, Cross-cutting, or Exit criteria.
-- **PASS-WITH-NOTES**: any partial but no fail. Human can commit but should read the notes.
-- **PASS**: all checks pass.
+- **PASS-WITH-NOTES**: any partial but no fail. Fix-now notes go back to the implementer before commit; deferred notes are the only ones that may survive into the commit.
+- **PASS**: all checks pass, or all notes are genuinely deferred with no fix-now items.
 - **Docs impact never causes a FAIL.** If a phase is otherwise clean but made a standing doc stale, the verdict is PASS-WITH-NOTES with the affected docs listed — the code is fine to commit; the map just needs a touch-up.
 
 ## Hard rules
