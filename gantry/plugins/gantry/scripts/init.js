@@ -102,6 +102,53 @@ if (failed.length) {
   process.exit(1);
 }
 
+// Plugin-native hook opt-in: only runs when init.js is executed inside an
+// installed plugin (CLAUDE_PLUGIN_ROOT is set by the plugin host). When set,
+// write the .gantry/enabled marker so the PreToolUse guards become active, and
+// ensure .gantry/active-phase.json is gitignored (transient run state).
+if (process.env.CLAUDE_PLUGIN_ROOT) {
+  const GITIGNORE_ENTRY = ".gantry/active-phase.json";
+
+  // Write .gantry/enabled marker (empty file).
+  const gantryDir = path.join(ROOT, ".gantry");
+  const markerPath = path.join(gantryDir, "enabled");
+  try {
+    fs.mkdirSync(gantryDir, { recursive: true });
+    if (!fs.existsSync(markerPath)) {
+      fs.writeFileSync(markerPath, "");
+      console.log("  Created .gantry/enabled (hook opt-in marker).");
+    } else {
+      console.log("  .gantry/enabled already present.");
+    }
+  } catch (e) {
+    console.error("! Gantry: could not write .gantry/enabled: " + e.message);
+  }
+
+  // Ensure .gantry/active-phase.json is gitignored - additive and idempotent.
+  const gitignorePath = path.join(ROOT, ".gitignore");
+  try {
+    if (!fs.existsSync(gitignorePath)) {
+      fs.writeFileSync(gitignorePath, GITIGNORE_ENTRY + "\n");
+      console.log("  Created .gitignore with " + GITIGNORE_ENTRY + ".");
+    } else {
+      const content = fs.readFileSync(gitignorePath, "utf8");
+      const lines = content.split(/\r?\n/);
+      const alreadyPresent = lines.some((l) => l.trim() === GITIGNORE_ENTRY);
+      if (!alreadyPresent) {
+        // Append with a trailing newline; add a leading newline if the file
+        // does not already end with one, so the entry is on its own line.
+        const needsNewline = content.length > 0 && !content.endsWith("\n");
+        fs.appendFileSync(gitignorePath, (needsNewline ? "\n" : "") + GITIGNORE_ENTRY + "\n");
+        console.log("  Appended " + GITIGNORE_ENTRY + " to .gitignore.");
+      } else {
+        console.log("  .gitignore already contains " + GITIGNORE_ENTRY + ".");
+      }
+    }
+  } catch (e) {
+    console.error("! Gantry: could not update .gitignore: " + e.message);
+  }
+}
+
 console.log("\n--- Project signals (to wire the pipeline to this repo) ---");
 console.log("Branch: " + (branch || "(not a git repo)"));
 console.log("Convention/style files found: " + (conventions.length ? conventions.join(", ") : "NONE - agents will fall back to their built-in checklist"));

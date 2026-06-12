@@ -21,6 +21,20 @@ function run(dir) {
     env: { ...process.env, GANTRY_PROJECT_DIR: dir },
   });
 }
+// runEnv: like run() but applies explicit overrides on top of process.env.
+// Pass a key with value undefined to delete it from the child env (prevents
+// host-environment leakage of CLAUDE_PLUGIN_ROOT into "unset" test cases).
+function runEnv(dir, overrides) {
+  const env = Object.assign({}, process.env, { GANTRY_PROJECT_DIR: dir });
+  for (const [k, v] of Object.entries(overrides)) {
+    if (v === undefined) {
+      delete env[k];
+    } else {
+      env[k] = v;
+    }
+  }
+  return spawnSync(process.execPath, [INIT_SCRIPT], { encoding: "utf8", env });
+}
 
 test("scaffolds CURRENTNESS_AUDIT.md and RUNTIME_VERIFICATION_QUEUE.md into docs/ when docs/ exists", () => {
   const dir = mk();
@@ -90,5 +104,61 @@ test("detects Gradle and Ruby stacks independently of other manifests", () => {
     assert.match(r.stdout, /Gradle/);
     assert.match(r.stdout, /Ruby/);
     assert.match(r.stdout, /\bGo\b/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+// ---------------------------------------------------------------------------
+// Plugin-native hook opt-in (CLAUDE_PLUGIN_ROOT gated)
+// ---------------------------------------------------------------------------
+
+test("with CLAUDE_PLUGIN_ROOT set: writes .gantry/enabled and creates .gitignore", () => {
+  const dir = mk();
+  try {
+    const r = runEnv(dir, { CLAUDE_PLUGIN_ROOT: "/fake/plugin/root" });
+    assert.equal(r.status, 0, r.stderr);
+    assert.ok(fs.existsSync(path.join(dir, ".gantry", "enabled")), ".gantry/enabled should be created");
+    assert.ok(fs.existsSync(path.join(dir, ".gitignore")), ".gitignore should be created");
+    const gi = fs.readFileSync(path.join(dir, ".gitignore"), "utf8");
+    assert.ok(gi.includes(".gantry/active-phase.json"), ".gitignore should contain .gantry/active-phase.json");
+    assert.match(r.stdout, /Created .gantry\/enabled/);
+    assert.match(r.stdout, /Created .gitignore/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("with CLAUDE_PLUGIN_ROOT set: does not duplicate .gitignore entry when already present", () => {
+  const dir = mk();
+  try {
+    write(dir, ".gitignore", ".gantry/active-phase.json\n");
+    const r = runEnv(dir, { CLAUDE_PLUGIN_ROOT: "/fake/plugin/root" });
+    assert.equal(r.status, 0, r.stderr);
+    const gi = fs.readFileSync(path.join(dir, ".gitignore"), "utf8");
+    const count = gi.split(".gantry/active-phase.json").length - 1;
+    assert.equal(count, 1, ".gantry/active-phase.json must appear exactly once");
+    assert.match(r.stdout, /already contains/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("with CLAUDE_PLUGIN_ROOT set: appends entry once to existing .gitignore that lacks it", () => {
+  const dir = mk();
+  try {
+    write(dir, ".gitignore", "node_modules/\n*.log\n");
+    const r = runEnv(dir, { CLAUDE_PLUGIN_ROOT: "/fake/plugin/root" });
+    assert.equal(r.status, 0, r.stderr);
+    const gi = fs.readFileSync(path.join(dir, ".gitignore"), "utf8");
+    assert.ok(gi.includes(".gantry/active-phase.json"), "entry should be appended");
+    assert.ok(gi.includes("node_modules/"), "existing content must be preserved");
+    const count = gi.split(".gantry/active-phase.json").length - 1;
+    assert.equal(count, 1, "entry must appear exactly once");
+    assert.match(r.stdout, /Appended .gantry\/active-phase\.json/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("with CLAUDE_PLUGIN_ROOT unset: writes neither .gantry/enabled nor .gitignore", () => {
+  const dir = mk();
+  try {
+    const r = runEnv(dir, { CLAUDE_PLUGIN_ROOT: undefined });
+    assert.equal(r.status, 0, r.stderr);
+    assert.ok(!fs.existsSync(path.join(dir, ".gantry", "enabled")), ".gantry/enabled must NOT be created when CLAUDE_PLUGIN_ROOT is unset");
+    assert.ok(!fs.existsSync(path.join(dir, ".gitignore")), ".gitignore must NOT be created when CLAUDE_PLUGIN_ROOT is unset");
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
