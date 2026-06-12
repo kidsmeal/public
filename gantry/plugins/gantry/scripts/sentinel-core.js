@@ -72,8 +72,8 @@ function isStale(sentinel, currentSessionId) {
 //   1. Guard against missing/empty input -> return FAIL_OPEN.
 //   2. Guard against null/missing root -> return FAIL_OPEN.
 //   3. Lowercase the drive letter on both filePath and root (Windows C:\ vs c:\).
-//   4. Convert all backslashes to forward slashes.
-//   5. path.relative() from root to filePath.
+//   4. Pick path semantics (win32 vs posix) from the input shape, not the host.
+//   5. relative() from root to filePath using that path module.
 //   6. If the result starts with ".." the target escapes the root -> return FAIL_OPEN.
 //   7. Return the POSIX-relative path.
 //
@@ -83,13 +83,18 @@ function normalize(filePath, root) {
     if (filePath == null || filePath === "") return FAIL_OPEN;
     if (root == null || root === "") return FAIL_OPEN;
 
-    // Lowercase drive letters and normalize separators.
+    // Lowercase drive letters (separators are normalized after relativizing).
     const normRoot = _normDrive(String(root));
     const normFile = _normDrive(String(filePath));
 
-    // Separators are already normalized; path.relative compares them with the
-    // host platform's rules (path.win32 on Windows, the design's pinned primary case).
-    const rel = path.relative(normRoot, normFile);
+    // Choose path semantics from the input shape, not the host platform, so a
+    // Windows-style path relativizes identically whether this runs on Windows,
+    // Linux, or macOS. A drive letter (c:) or a backslash means win32; otherwise
+    // posix. Relying on the host `path` makes the Windows-path cases return
+    // FAIL_OPEN when CI runs on Linux/macOS (path.posix has no drive concept).
+    const looksWin = (s) => /^[a-z]:/i.test(s) || s.includes("\\");
+    const pmod = looksWin(normRoot) || looksWin(normFile) ? path.win32 : path.posix;
+    const rel = pmod.relative(normRoot, normFile);
 
     // If the relative path starts with "..", the file is outside the root.
     if (rel.startsWith("..")) return FAIL_OPEN;
