@@ -11,9 +11,9 @@ Gantry is distilled from a real game project's `.claude/` workflow and generaliz
 ## What it gives you
 
 - **An interactive design author.** Start from an idea: the `design-plan-creator` skill grills you through the open decisions, one branch at a time, then writes a buildable design doc grounded in your codebase that the rest of the pipeline consumes.
-- **Four gated subagents.** `design-reviewer` audits the design before it is planned, `phase-planner` decomposes it into ordered phases, `implementer` builds exactly one phase tests-first, and `phase-reviewer` reads the uncommitted diff before you commit. Each one has hard rules that stop it from overreaching.
+- **Four gated subagents.** `design-reviewer` audits the design before it is planned, `phase-planner` decomposes it into ordered phases, `implementer` builds exactly one phase tests-first, and `phase-reviewer` reads the uncommitted diff before you commit. Each one runs under explicit rules against overreaching.
 - **A design audit you run before you build.** The design-reviewer checks the design against your project's rubric (or a built-in design-quality checklist), fixes what it can, and marks every unmade decision with a `[NEEDS USER DECISION]` marker instead of guessing.
-- **One phase at a time.** The implementer physically will not spill into the next phase, will not commit, and will not advance. You verify and commit between every step.
+- **One phase at a time.** The implementer's contract scopes it to a single phase: it builds that phase, then stops and reports. It does not commit and does not advance on its own, and a write it needs outside the phase's file list comes back as reported scope drift rather than a silent expansion. The phase-reviewer then catches any drift on the diff. You verify and commit between every step.
 - **A review before every commit.** The phase-reviewer returns PASS, FAIL, or PASS-WITH-NOTES with specific, fixable findings, so scope drift and convention violations are caught on the diff rather than buried. It also flags **docs impact** — which of the project's standing docs (the map, glossary, conventions) the diff just made stale — so they're refreshed within the same phase instead of rotting.
 - **One command to run it all.** `/gantry:run` drives the whole sequence in order through both review gates (the design review, and a phase review plus a re-review after any fix), pausing only at the decisions and commits that are yours.
 - **Two living docs that keep the project honest.** A currentness audit answers "what is actually current?" before a cold session trusts an old plan, and a runtime verification queue tracks the gap between "the test suite passes" and "confirmed in a real run".
@@ -40,7 +40,7 @@ You can also skip the plugin system entirely and copy `plugins/gantry/agents/`, 
 /gantry:version
 ```
 
-You should see a line like `Gantry v0.4.0`. If the command isn't recognized, the plugin didn't load. Run `/reload-plugins` (or restart Claude Code) and try again.
+You should see a line like `Gantry v0.4.1`. If the command isn't recognized, the plugin didn't load. Run `/reload-plugins` (or restart Claude Code) and try again.
 
 ### 3. Initialize a project
 
@@ -100,7 +100,7 @@ Both assume a simple doc-lifecycle taxonomy that Gantry nudges toward: the roadm
 
 ## Why the gates matter
 
-The value is in the constraints, not the cleverness. Scope drift, a disabled test, and a convention violation are hard stops in Gantry, not warnings. The implementer cannot expand past its file list without reporting it. The reviewer cannot pass a diff that trips a documented anti-pattern. Ambiguity becomes a marker or a blocker, never a silent decision. And no agent commits, pushes, or runs destructive git: the human holds the commit at every gate. The point of breaking work into gated phases is that finishing one and stopping is always a clean place to stand.
+The value is in the constraints, not the cleverness. Scope drift, a disabled test, and a convention violation are what the gates are built to catch, not wave through. The implementer's contract forbids expanding past its file list without reporting it; the phase-reviewer's contract forbids passing a diff that trips a documented anti-pattern, and it reads the actual uncommitted diff so a violation is caught against the real change rather than taken on trust. Ambiguity becomes a marker or a blocker rather than a silent decision. And every agent's contract reserves commit, push, and destructive git for you: the human holds the commit at every gate. The point of breaking work into gated phases is that finishing one and stopping is always a clean place to stand.
 
 ## Non-goals
 
