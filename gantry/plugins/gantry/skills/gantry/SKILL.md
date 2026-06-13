@@ -1,7 +1,7 @@
 ---
 name: gantry
 description: Use to run a feature through the full Gantry pipeline in the correct order with both review gates - phrases like "run this through gantry", "gantry pipeline", "plan and build this with reviews", "drive the gated build end to end", or the /gantry:run command. Orchestrates design-plan-creator (if needed) -> design-reviewer -> phase-planner -> per phase (implementer -> phase-reviewer, re-reviewing after any fix), pausing only at the human gates (unresolved decisions, plan blockers, every commit). Not for quick one-off edits.
-version: 0.5.0
+version: 0.6.0
 ---
 
 # Gantry pipeline orchestrator
