@@ -132,13 +132,13 @@ The commit guard stops casual drift, not active evasion. It catches `git commit`
 
 ## What a run costs
 
-Rough token cost from a real five-phase run of Gantry on its own enforcement hooks. These count the subagent work (design review, planning, each build and review), not the orchestrating session around them.
+A single-run ballpark, not a benchmark. These are the subagent token counts from one real five-phase run of Gantry on its own enforcement hooks (design review, planning, each build and review). They exclude the orchestrating session that drives the gates, which is a real and non-trivial part of the cost, so read the totals as a floor.
 
 - A phase that passes review clean: 75k to 105k tokens.
 - A phase that fails review, gets a fix, and is re-reviewed: 180k to 235k.
-- The full pipeline (design review, plan, five phases): about 560k for a clean run, about 800k for this run, which failed two phase reviews on real bugs and re-ran the design review once.
+- The full pipeline (design review, plan, five phases): about 560k for a clean run, about 800k for this run, which failed two phase reviews and re-ran the design review once.
 
-The gates cost tokens. The two failed reviews in this run are where they paid for themselves: each caught a real bug the passing test suite did not.
+The gates cost tokens, and the failed reviews are where most of the cost lands. In this run, those failed reviews are also where real bugs got caught and fixed before commit.
 
 ## Non-goals
 
