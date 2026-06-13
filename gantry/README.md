@@ -88,11 +88,12 @@ Two more commands keep the docs honest as the project ships. `/gantry:audit` ref
 
 ## Commands
 
-Most of the time you run one command. `/gantry:run` drives the whole pipeline through both review gates, stopping only at your decisions and commits. The other commands are that same pipeline broken into pieces, for when you want to drive a single gate by hand or pick up mid-stream.
+Most of the time you run one command. `/gantry:run` drives the whole pipeline through both review gates, stopping only at your decisions and commits. The other commands are that same pipeline broken into pieces, for when you want to drive a single gate by hand or pick up mid-stream. For a small, self-contained change, `/gantry:quick <description>` is the lite lane: one build, one review, then your commit, with none of the design-and-plan front end (and no hooks, so it is prompt-level).
 
 | Command | What it does |
 |---|---|
 | `/gantry:run <design> [rubric]` | The front door. Run the whole pipeline in order, through both review gates, gating only on your decisions and commits. |
+| `/gantry:quick <description>` | The lite lane. Build a small change tests-first, review the diff, stop for your commit. No design, plan, or hooks. |
 | `/gantry:init` | Scaffold the two audit docs and detect the project's conventions and test/build commands. |
 | `/gantry:draft <idea>` | Grill out a buildable design doc from an idea, one decision at a time, grounded in the codebase. |
 | `/gantry:design <draft> [rubric]` | Audit a design against a rubric or a generic checklist before planning. |

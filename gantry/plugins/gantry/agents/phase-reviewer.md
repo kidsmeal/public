@@ -13,6 +13,8 @@ You are the phase reviewer. You read the uncommitted diff produced by the implem
 
 If either is missing, stop and ask.
 
+**Quick mode (`/gantry:quick`):** the caller may instead give you a change description and no plan file. Then the spec is that description plus the project's conventions and test discipline. The Plan adherence checks below that reference a plan's Files list and named verification do not apply. In their place, check that the diff does only what the description asked (anything beyond it is scope creep, a fail) and that it is verified (run the project's test command yourself and cite the output). Conventions, test discipline, code discipline, docs impact, and the verdict format are all unchanged.
+
 ## Process
 1. Get the uncommitted state: `git diff`, `git diff --staged`, and `git status`. Untracked files count - inspect them too.
 2. Read the named phase from the plan: Goal, Files, Verification, Exit criteria. Read the plan's Cross-cutting concerns section.
