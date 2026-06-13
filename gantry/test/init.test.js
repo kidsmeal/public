@@ -35,6 +35,18 @@ function runEnv(dir, overrides) {
   }
   return spawnSync(process.execPath, [INIT_SCRIPT], { encoding: "utf8", env });
 }
+// runEnvArgs: like runEnv() but passes extra argv to the script.
+function runEnvArgs(dir, overrides, args) {
+  const env = Object.assign({}, process.env, { GANTRY_PROJECT_DIR: dir });
+  for (const [k, v] of Object.entries(overrides)) {
+    if (v === undefined) {
+      delete env[k];
+    } else {
+      env[k] = v;
+    }
+  }
+  return spawnSync(process.execPath, [INIT_SCRIPT, ...args], { encoding: "utf8", env });
+}
 
 test("scaffolds CURRENTNESS_AUDIT.md and RUNTIME_VERIFICATION_QUEUE.md into docs/ when docs/ exists", () => {
   const dir = mk();
@@ -111,10 +123,25 @@ test("detects Gradle and Ruby stacks independently of other manifests", () => {
 // Plugin-native hook opt-in (CLAUDE_PLUGIN_ROOT gated)
 // ---------------------------------------------------------------------------
 
-test("with CLAUDE_PLUGIN_ROOT set: writes .gantry/enabled and creates .gitignore", () => {
+// Default run (no --enable-hooks flag): even with CLAUDE_PLUGIN_ROOT set,
+// the marker and .gitignore must NOT be written. Only a detection report is
+// printed to inform the user that enforcement is available but not enabled.
+test("with CLAUDE_PLUGIN_ROOT set (default run): does NOT write .gantry/enabled or .gitignore", () => {
   const dir = mk();
   try {
     const r = runEnv(dir, { CLAUDE_PLUGIN_ROOT: "/fake/plugin/root" });
+    assert.equal(r.status, 0, r.stderr);
+    assert.ok(!fs.existsSync(path.join(dir, ".gantry", "enabled")), ".gantry/enabled must NOT be created on default run");
+    assert.ok(!fs.existsSync(path.join(dir, ".gitignore")), ".gitignore must NOT be created on default run");
+    assert.match(r.stdout, /enforcement is available but NOT enabled/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+// Opt-in path (--enable-hooks flag): marker and .gitignore are written.
+test("with CLAUDE_PLUGIN_ROOT set and --enable-hooks: writes .gantry/enabled and creates .gitignore", () => {
+  const dir = mk();
+  try {
+    const r = runEnvArgs(dir, { CLAUDE_PLUGIN_ROOT: "/fake/plugin/root" }, ["--enable-hooks"]);
     assert.equal(r.status, 0, r.stderr);
     assert.ok(fs.existsSync(path.join(dir, ".gantry", "enabled")), ".gantry/enabled should be created");
     assert.ok(fs.existsSync(path.join(dir, ".gitignore")), ".gitignore should be created");
@@ -125,11 +152,11 @@ test("with CLAUDE_PLUGIN_ROOT set: writes .gantry/enabled and creates .gitignore
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
-test("with CLAUDE_PLUGIN_ROOT set: does not duplicate .gitignore entry when already present", () => {
+test("with CLAUDE_PLUGIN_ROOT set and --enable-hooks: does not duplicate .gitignore entry when already present", () => {
   const dir = mk();
   try {
     write(dir, ".gitignore", ".gantry/active-phase.json\n");
-    const r = runEnv(dir, { CLAUDE_PLUGIN_ROOT: "/fake/plugin/root" });
+    const r = runEnvArgs(dir, { CLAUDE_PLUGIN_ROOT: "/fake/plugin/root" }, ["--enable-hooks"]);
     assert.equal(r.status, 0, r.stderr);
     const gi = fs.readFileSync(path.join(dir, ".gitignore"), "utf8");
     const count = gi.split(".gantry/active-phase.json").length - 1;
@@ -138,11 +165,11 @@ test("with CLAUDE_PLUGIN_ROOT set: does not duplicate .gitignore entry when alre
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
-test("with CLAUDE_PLUGIN_ROOT set: appends entry once to existing .gitignore that lacks it", () => {
+test("with CLAUDE_PLUGIN_ROOT set and --enable-hooks: appends entry once to existing .gitignore that lacks it", () => {
   const dir = mk();
   try {
     write(dir, ".gitignore", "node_modules/\n*.log\n");
-    const r = runEnv(dir, { CLAUDE_PLUGIN_ROOT: "/fake/plugin/root" });
+    const r = runEnvArgs(dir, { CLAUDE_PLUGIN_ROOT: "/fake/plugin/root" }, ["--enable-hooks"]);
     assert.equal(r.status, 0, r.stderr);
     const gi = fs.readFileSync(path.join(dir, ".gitignore"), "utf8");
     assert.ok(gi.includes(".gantry/active-phase.json"), "entry should be appended");

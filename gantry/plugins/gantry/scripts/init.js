@@ -102,50 +102,69 @@ if (failed.length) {
   process.exit(1);
 }
 
-// Plugin-native hook opt-in: only runs when init.js is executed inside an
-// installed plugin (CLAUDE_PLUGIN_ROOT is set by the plugin host). When set,
-// write the .gantry/enabled marker so the PreToolUse guards become active, and
-// ensure .gantry/active-phase.json is gitignored (transient run state).
+// Plugin-native hook opt-in: only relevant when init.js is executed inside an
+// installed plugin (CLAUDE_PLUGIN_ROOT is set by the plugin host).
+//
+// Default run (no --enable-hooks flag): report that enforcement is available
+// but NOT enabled, and print how to enable it. Do NOT write .gantry/enabled
+// and do NOT touch .gitignore.
+//
+// With --enable-hooks flag: write the .gantry/enabled marker so the
+// PreToolUse guards become active, and ensure .gantry/active-phase.json is
+// gitignored (transient run state).
 if (process.env.CLAUDE_PLUGIN_ROOT) {
   const GITIGNORE_ENTRY = ".gantry/active-phase.json";
+  const enableHooks = process.argv.includes("--enable-hooks");
 
-  // Write .gantry/enabled marker (empty file).
-  const gantryDir = path.join(ROOT, ".gantry");
-  const markerPath = path.join(gantryDir, "enabled");
-  try {
-    fs.mkdirSync(gantryDir, { recursive: true });
-    if (!fs.existsSync(markerPath)) {
-      fs.writeFileSync(markerPath, "");
-      console.log("  Created .gantry/enabled (hook opt-in marker).");
-    } else {
-      console.log("  .gantry/enabled already present.");
-    }
-  } catch (e) {
-    console.error("! Gantry: could not write .gantry/enabled: " + e.message);
-  }
+  if (!enableHooks) {
+    // Detection-only report: inform that enforcement is available but inert.
+    console.log(
+      "\n--- Phase enforcement hooks ---\n" +
+      "  This is a plugin install. PreToolUse enforcement is available but NOT enabled.\n" +
+      "  The hooks are inert until you opt in. To enable them, re-run the opt-in step\n" +
+      "  in /gantry:init (it will run: node \"" + __filename + "\" --enable-hooks)."
+    );
+  } else {
+    // Explicit opt-in: write the marker and update .gitignore.
 
-  // Ensure .gantry/active-phase.json is gitignored - additive and idempotent.
-  const gitignorePath = path.join(ROOT, ".gitignore");
-  try {
-    if (!fs.existsSync(gitignorePath)) {
-      fs.writeFileSync(gitignorePath, GITIGNORE_ENTRY + "\n");
-      console.log("  Created .gitignore with " + GITIGNORE_ENTRY + ".");
-    } else {
-      const content = fs.readFileSync(gitignorePath, "utf8");
-      const lines = content.split(/\r?\n/);
-      const alreadyPresent = lines.some((l) => l.trim() === GITIGNORE_ENTRY);
-      if (!alreadyPresent) {
-        // Append with a trailing newline; add a leading newline if the file
-        // does not already end with one, so the entry is on its own line.
-        const needsNewline = content.length > 0 && !content.endsWith("\n");
-        fs.appendFileSync(gitignorePath, (needsNewline ? "\n" : "") + GITIGNORE_ENTRY + "\n");
-        console.log("  Appended " + GITIGNORE_ENTRY + " to .gitignore.");
+    // Write .gantry/enabled marker (empty file).
+    const gantryDir = path.join(ROOT, ".gantry");
+    const markerPath = path.join(gantryDir, "enabled");
+    try {
+      fs.mkdirSync(gantryDir, { recursive: true });
+      if (!fs.existsSync(markerPath)) {
+        fs.writeFileSync(markerPath, "");
+        console.log("  Created .gantry/enabled (hook opt-in marker).");
       } else {
-        console.log("  .gitignore already contains " + GITIGNORE_ENTRY + ".");
+        console.log("  .gantry/enabled already present.");
       }
+    } catch (e) {
+      console.error("! Gantry: could not write .gantry/enabled: " + e.message);
     }
-  } catch (e) {
-    console.error("! Gantry: could not update .gitignore: " + e.message);
+
+    // Ensure .gantry/active-phase.json is gitignored - additive and idempotent.
+    const gitignorePath = path.join(ROOT, ".gitignore");
+    try {
+      if (!fs.existsSync(gitignorePath)) {
+        fs.writeFileSync(gitignorePath, GITIGNORE_ENTRY + "\n");
+        console.log("  Created .gitignore with " + GITIGNORE_ENTRY + ".");
+      } else {
+        const content = fs.readFileSync(gitignorePath, "utf8");
+        const lines = content.split(/\r?\n/);
+        const alreadyPresent = lines.some((l) => l.trim() === GITIGNORE_ENTRY);
+        if (!alreadyPresent) {
+          // Append with a trailing newline; add a leading newline if the file
+          // does not already end with one, so the entry is on its own line.
+          const needsNewline = content.length > 0 && !content.endsWith("\n");
+          fs.appendFileSync(gitignorePath, (needsNewline ? "\n" : "") + GITIGNORE_ENTRY + "\n");
+          console.log("  Appended " + GITIGNORE_ENTRY + " to .gitignore.");
+        } else {
+          console.log("  .gitignore already contains " + GITIGNORE_ENTRY + ".");
+        }
+      }
+    } catch (e) {
+      console.error("! Gantry: could not update .gitignore: " + e.message);
+    }
   }
 }
 

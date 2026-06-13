@@ -2,6 +2,14 @@
 description: Implement exactly one phase of a plan, tests-first, then stop for review
 argument-hint: <path-to-plan> <phase-number>
 ---
+Before spawning the implementer, run and wait for:
+
+```
+node ${CLAUDE_PLUGIN_ROOT}/scripts/sentinel.js write $1 $2
+```
+
+This writes the active-phase sentinel (`.gantry/active-phase.json`) with the phase's file list before the implementer's first edit, so the file-list guard is active from the first tool call. If the project has not opted in (no `.gantry/enabled` marker), the guard is inert and this call is a harmless no-op; run it regardless.
+
 Spawn the **implementer** subagent to implement exactly ONE phase.
 
 - Plan file: `$1`
