@@ -44,12 +44,11 @@ No agent commits, pushes, or runs destructive git. You hold every commit.
 
 ### 1. Install
 
-Gantry lives in a subfolder of the `kidsmeal/public` repo, so install it as a local marketplace:
+Add the marketplace and install, straight from GitHub:
 
 ```
-git clone https://github.com/kidsmeal/public.git
-/plugin marketplace add public/gantry
-/plugin install gantry@gantry
+/plugin marketplace add kidsmeal/public
+/plugin install gantry@kidsmeal
 ```
 
 If you install during an existing Claude Code session, run `/reload-plugins` to activate it. No restart is needed.
