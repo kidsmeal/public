@@ -2,11 +2,11 @@
 
 A gated design, plan, build, and review pipeline for [Claude Code](https://claude.com/claude-code).
 
-Gantry is a small Claude Code plugin that turns a finalized design into reviewed, phased implementation, where stopping mid-build is always safe and nothing reaches a commit unreviewed. Letting an AI implement a whole feature in one pass is how scope quietly creeps, a test gets disabled to make something "pass", and a convention violation slips into history. Rather than asking the model to be disciplined, Gantry builds the discipline into the workflow: it breaks the work into small phases, implements exactly one at a time, and reviews the uncommitted diff before you commit. A session that ends halfway through leaves a clean, reviewable boundary instead of a half-finished mess.
+Gantry turns a finalized design into reviewed, phased implementation, so nothing reaches a commit unreviewed and stopping mid-build always leaves a clean place to stand. Letting an AI implement a whole feature in one pass is how scope quietly creeps, a test gets disabled to make something "pass", and a convention violation slips into history. Rather than asking the model to be disciplined, Gantry builds the discipline into the workflow: it breaks the work into small phases, implements exactly one at a time, and reviews the uncommitted diff before you commit. A session that ends halfway through leaves a clean, reviewable boundary instead of a half-finished mess.
 
-It is project-agnostic by construction. Every agent reads the host project's own convention files and detects its own test and build commands at run time, so the same plugin works in Flutter, Godot, Node, Python, Rust, Go, or .NET with no per-stack wiring. It has zero dependencies, runs on local files and ordinary git, and makes no network calls of its own. It uses the Node.js runtime Claude Code already bundles.
+It is project-agnostic by construction. Every agent reads the host project's own convention files and detects its own test and build commands at run time, so the same plugin works in Flutter, Godot, Node, Python, Rust, Go, or .NET with no per-stack wiring.
 
-Gantry is distilled from a real game project's `.claude/` workflow and generalized so any repo can use it.
+Gantry grew out of a real game's `.claude/` workflow for designing and building its heroes, generalized so the same gated process moves to any project.
 
 ## What it gives you
 
@@ -17,6 +17,28 @@ Gantry is distilled from a real game project's `.claude/` workflow and generaliz
 - **A review before every commit.** The phase-reviewer returns PASS, FAIL, or PASS-WITH-NOTES with specific, fixable findings, so scope drift and convention violations are caught on the diff rather than buried. It also flags **docs impact** — which of the project's standing docs (the map, glossary, conventions) the diff just made stale — so they're refreshed within the same phase instead of rotting.
 - **One command to run it all.** `/gantry:run` drives the whole sequence in order through both review gates (the design review, and a phase review plus a re-review after any fix), pausing only at the decisions and commits that are yours.
 - **Two living docs that keep the project honest.** A currentness audit answers "what is actually current?" before a cold session trusts an old plan, and a runtime verification queue tracks the gap between "the test suite passes" and "confirmed in a real run".
+
+## How this differs from what you already have
+
+The first question is usually "doesn't plan mode or an agent team already do this?" They work at different layers.
+
+**Plan mode** gives you one plan up front. Gantry breaks the plan into phases, reviews the actual diff before every commit, and re-reviews any fix before it lands. Plan mode does not gate each phase or read your diffs.
+
+**Agent teams** parallelize the work. Gantry gates it: every phase stops at a reviewed boundary before the next one starts.
+
+**Spec-kit and the spec-driven-development plugins** generate a spec. Gantry executes against a finalized design and reviews the uncommitted diff before each commit, then re-reviews after a fix. Those two loops are the part spec generation does not have.
+
+**Task Master and the backlog tools** track what to build next. Gantry governs how one phase gets built and whether its diff is allowed to commit. The two sit at different layers and run together without conflict.
+
+## Security
+
+Plugin readers check the source before they trust it, so here is the posture plainly.
+
+Gantry runs plain Node.js scripts on the runtime Claude Code already bundles. Zero dependencies, no network calls, no telemetry, no API keys. It works on local files and ordinary git.
+
+Its hooks, when you opt in through `/gantry:init`, only ever return allow or deny on a tool call. They never rewrite your commands and never touch tool output. That line matters: a `PreToolUse` hook that rewrites commands or filters output can silently corrupt what the agent reads, and an agent acting on a corrupted read can write garbage to disk. Gantry's guards cannot do that by construction, and they fail open, so any error in a guard allows the call instead of blocking it. The guards and their limits are described under "Why the gates matter".
+
+No agent commits, pushes, or runs destructive git. You hold every commit.
 
 ## Quick Start
 
@@ -67,15 +89,17 @@ Two more commands keep the docs honest as the project ships. `/gantry:audit` ref
 
 ## Commands
 
+Most of the time you run one command. `/gantry:run` drives the whole pipeline through both review gates, stopping only at your decisions and commits. The other commands are that same pipeline broken into pieces, for when you want to drive a single gate by hand or pick up mid-stream.
+
 | Command | What it does |
 |---|---|
+| `/gantry:run <design> [rubric]` | The front door. Run the whole pipeline in order, through both review gates, gating only on your decisions and commits. |
 | `/gantry:init` | Scaffold the two audit docs and detect the project's conventions and test/build commands. |
 | `/gantry:draft <idea>` | Grill out a buildable design doc from an idea, one decision at a time, grounded in the codebase. |
 | `/gantry:design <draft> [rubric]` | Audit a design against a rubric or a generic checklist before planning. |
 | `/gantry:plan <design>` | Turn a finalized design into a phased implementation plan. |
 | `/gantry:build <plan> <phase>` | Implement exactly one phase, tests-first, then stop for review. |
 | `/gantry:review <plan> <phase>` | Review the uncommitted diff for one phase against the plan and conventions. |
-| `/gantry:run <design> [rubric]` | Run the whole pipeline in order, through both review gates, gating only on your decisions and commits. |
 | `/gantry:audit` | Refresh `CURRENTNESS_AUDIT.md` against the code and recent commits. |
 | `/gantry:verify [area]` | Add to, or sweep, the runtime verification queue. |
 | `/gantry:version` | Print the installed version. Confirms the plugin is active. |
