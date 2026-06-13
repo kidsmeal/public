@@ -19,7 +19,7 @@ stopping to verify them.
 ## Review 1 - FAIL
 
 The phase-reviewer re-ran `node --test` itself (49/49, the same green suite) and then found two correctness
-gaps the green suite did not cover:
+problems, neither of which the existing tests would have caught (for different reasons, spelled out below):
 
 1. **Wrong session env var.** The writer read `CLAUDE_SESSION_ID` / `GANTRY_SESSION_ID`, neither of which
    exists in the Claude Code Bash environment. The reviewer checked the live environment and found the real
@@ -66,13 +66,23 @@ pin the backtick Files-format in `templates/PLAN.md`).
 
 ## Why it was useful
 
-Both FAIL findings were latent bugs that a passing 49-test suite reported as healthy. Either would have
-shipped silently: the session bug would have quietly disabled a staleness signal in production, and the
-parser bug would have produced an empty enforcement scope the first time it met a canonically-formatted
-plan. The gate caught them by doing two things the build did not: re-running verification independently, and
-checking the code's assumptions against the real environment and the real template rather than against the
-implementation's own fixtures. The fix loop closed in a single cycle, and the two issues that could not be
-resolved inside Phase 2 were deferred with reasons rather than dropped.
+The two findings are different in kind, and it is worth being precise rather than claiming the gate beat the
+tests.
+
+The session env-var bug is not something a unit test could have caught. There is nothing to assert against a
+wrong environment-variable name. The reviewer found it by checking the code against the real Claude Code
+environment, an external fact the implementer's fixture could not encode, and tracing the consequence to the
+Phase 5 wiring. That is a reviewer supplying a fact the implementer got wrong, not a gate catching what a
+test missed.
+
+The parser bug is the opposite. A passing test existed, but its fixture used the same bullet shape as the
+implementation, so the test proved the code agreed with itself rather than with the canonical template. A
+test written against the real template format would have caught this with no reviewer involved. The gate's
+contribution was reading the code against the real artifact instead of the self-confirming fixture.
+
+What both have in common, and what Gantry actually provides, is that the second read happened as a mandatory
+gate rather than depending on someone choosing to do it. The fix loop closed in one cycle, and the two
+issues that could not be resolved inside Phase 2 were deferred with reasons rather than dropped.
 
 ## Diff
 
