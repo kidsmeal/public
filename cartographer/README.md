@@ -8,7 +8,18 @@ A Claude Code plugin (and standalone skill) that documents a codebase. Point it 
 - A roadmap (`docs/ROADMAP.md`) of active work — built with you through a few quick questions, since current/next/blocked work is the one thing it can't read from the code.
 - A conventions doc (`docs/CONVENTIONS.md`) covering naming, layout, and idioms.
 
-It reads the actual files before writing anything, verifies that every path it cites exists, and won't overwrite docs you already have. The plugin also ships freshness checks you can re-run anytime — `verify.js` re-checks that every cited path and `#anchor` still resolves, and `drift.js` scores how many commits have touched the files a doc describes since the doc was last updated — so the map fails loudly when it drifts instead of quietly going wrong. You can ask for the whole set or just one piece (for example, only the codebase map). On a large repo it splits the map into a slim index plus per-subsystem files so you only open the part you need.
+It reads the actual files before writing anything, verifies that every path it cites exists, and won't overwrite docs you already have. You can ask for the whole set or just one piece (for example, only the codebase map). On a large repo it splits the map into a slim index plus per-subsystem files so you only open the part you need.
+
+The plugin also ships a trust layer, so the map fails loudly when it drifts instead of quietly going wrong:
+
+- `verify.js` re-checks that every cited path, `#anchor`, and `path::symbol` citation still resolves. Symbol citations (used for entry points and golden-path hops) mean renaming an entry-point function breaks verification, not just moving its file.
+- `drift.js` scores each doc section by section: how many commits have touched the files a `##` section cites since the doc was last committed. Labels are graded honestly — `ok` / `aging` / `probably stale` for churn (a proxy, not proof of wrongness), and `stale (broken refs)` only when verify caught a dead reference. It names the exact section to re-read instead of condemning a whole doc.
+- An edit-time hook (PostToolUse) notes, once per file per session, when an agent edits a file the map cites: "docs/INDEX.md cites this file; check the map if you moved or renamed it." A note, never a block — no setup beyond installing the plugin.
+- `slice.js <path-or-keyword>` prints just the map sections that cite a file or match a topic, as paste-ready markdown. An orchestrator briefs each subagent with one slice instead of letting N subagents each re-explore the repo.
+
+### What it costs, what it pays back
+
+The discovery pass is expensive by design — the skill reads real code before writing anything. That cost amortizes over agent traffic: every later session (and every subagent briefed with a slice) loads a few hundred tokens of map instead of re-deriving the structure, so a repo agents touch weekly pays the map back fast. A 20-file tool you visit twice a year may only need the CLAUDE.md block, and the skill already scales down to that honestly rather than manufacturing five docs.
 
 ## Install
 
@@ -46,11 +57,17 @@ cartographer/
 ├── codebase-cartographer.skill              # the same skill packaged as a single installable file
 └── plugins/cartographer/
     ├── .claude-plugin/plugin.json
+    ├── hooks/
+    │   ├── hooks.json                    # registers the edit-time note below
+    │   └── cited-file-note.js            # PostToolUse: "the map cites the file you just edited"
     ├── templates/
     │   └── ROADMAP.md                    # roadmap scaffold in the structured row schema (Compass-compatible)
     ├── scripts/
-    │   ├── verify.js                     # re-checks every cited path + #anchor still resolves
-    │   └── drift.js                      # scores how far each doc lags the code it cites (git)
+    │   ├── refs.js                       # shared reference extractor (paths, #anchors, ::symbols)
+    │   ├── docs.js                       # shared standing-doc discovery + section splitting
+    │   ├── verify.js                     # re-checks every cited path + #anchor + ::symbol still resolves
+    │   ├── drift.js                      # per-section drift scoring with graded labels (git)
+    │   └── slice.js                      # prints the map sections relevant to a file/topic, for subagent briefing
     └── skills/codebase-cartographer/
         ├── SKILL.md                         # the skill itself (workflow + rules)
         ├── references/
