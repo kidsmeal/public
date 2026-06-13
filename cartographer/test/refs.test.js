@@ -31,6 +31,24 @@ test("does not extract a path inside a fenced code block", () => {
   assert.equal(extractRefs(text).filter((r) => r.kind === "code-path").length, 0, "path inside fence should not be extracted");
 });
 
+test("extracts a path::symbol citation with the symbol split off the path", () => {
+  const r = extractRefs("Boot happens in `src/server/index.ts::bootServer`.").find((x) => x.kind === "code-path");
+  assert.equal(r.path, "src/server/index.ts");
+  assert.equal(r.symbol, "bootServer");
+  assert.equal(r.anchor, null);
+});
+
+test("a malformed ::suffix keeps the path checkable but carries no symbol", () => {
+  const r = extractRefs("see `src/a.js::not-an-identifier`").find((x) => x.kind === "code-path");
+  assert.equal(r.path, "src/a.js");
+  assert.equal(r.symbol, null);
+});
+
+test("plain paths carry a null symbol", () => {
+  const r = extractRefs("see `src/a.js`").find((x) => x.kind === "code-path");
+  assert.equal(r.symbol, null);
+});
+
 test("extracts the same path when it appears inline in backticks outside a fence", () => {
   const text = "See `src/app.js` for details.\n";
   assert.ok(extractRefs(text).some((r) => r.kind === "code-path" && r.path === "src/app.js"), "inline code-path should be extracted");

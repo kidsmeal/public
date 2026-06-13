@@ -50,6 +50,48 @@ test("flags an anchor that no longer resolves in an existing doc", () => {
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+test("symbol citation passes while the symbol exists in the target", () => {
+  const dir = mk();
+  try {
+    w(dir, "src/server.js", "function bootServer() {}\nmodule.exports = { bootServer };\n");
+    w(dir, "docs/INDEX.md", "Boot: `src/server.js::bootServer`.\n");
+    const { findings } = verifyDocs(dir);
+    assert.equal(findings.length, 0, JSON.stringify(findings));
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("flags missing-symbol when the cited symbol is gone (word-bound, no substring rescue)", () => {
+  const dir = mk();
+  try {
+    w(dir, "src/server.js", "function bootServerQuickly() {}\n");
+    w(dir, "docs/INDEX.md", "Boot: `src/server.js::bootServer`.\n");
+    const { findings } = verifyDocs(dir);
+    assert.equal(findings.length, 1, JSON.stringify(findings));
+    assert.equal(findings[0].kind, "missing-symbol");
+    assert.equal(findings[0].detail, "::bootServer");
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("symbol check is skipped for non-code targets", () => {
+  const dir = mk();
+  try {
+    w(dir, "docs/notes.md", "no such identifier here\n");
+    w(dir, "docs/INDEX.md", "See `docs/notes.md::bootServer`.\n");
+    const { findings } = verifyDocs(dir);
+    assert.equal(findings.length, 0, JSON.stringify(findings));
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("a symbol citation on a missing file reports missing-path, not missing-symbol", () => {
+  const dir = mk();
+  try {
+    w(dir, "docs/INDEX.md", "Boot: `src/gone.js::bootServer`.\n");
+    const { findings } = verifyDocs(dir);
+    assert.equal(findings.length, 1, JSON.stringify(findings));
+    assert.equal(findings[0].kind, "missing-path");
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test("does not false-flag URLs, commands, or bare filenames", () => {
   const dir = mk();
   try {

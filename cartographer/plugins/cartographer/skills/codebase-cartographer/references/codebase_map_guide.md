@@ -73,8 +73,8 @@ jumps.
 
 | Purpose | Path | Notes |
 |---|---|---|
-| <e.g. CLI entry> | `src/cli/main.ts` | parses args, dispatches to commands |
-| <e.g. HTTP server> | `src/server/index.ts` | boots Express, mounts routers |
+| <e.g. CLI entry> | `src/cli/main.ts::main` | parses args, dispatches to commands |
+| <e.g. HTTP server> | `src/server/index.ts::bootServer` | boots Express, mounts routers |
 
 ## Architecture at a glance
 
@@ -163,11 +163,21 @@ orients every later section.
 **Entry points** — Find them by reading manifests and bootstrap files, not by guessing.
 `package.json` `bin`/`scripts`, `pyproject.toml` `[project.scripts]`, `main.go`, `fn main()`,
 `public static void main`, `if __name__ == "__main__"`, the framework's app root, the game's
-main scene. List *all* of them; a repo often has a server, a CLI, and a worker.
+main scene. List *all* of them; a repo often has a server, a CLI, and a worker. Cite each one
+down to the function with a **symbol citation** — `src/server/index.ts::bootServer` — so
+`verify.js` fails when the function is renamed, not just when the file moves. (The symbol must
+appear verbatim in the file; the check is a word-bound text match, so it works in any language.)
 
 **Architecture at a glance** — The golden-path trace is the highest-leverage paragraph in the
-whole map. Pick the flow that most defines the app, and name the actual file at every hop. A
+whole map. Pick the flow that most defines the app, and name the actual file at every hop —
+and where a hop lands on a specific function or class, use a symbol citation
+(`src/router/dispatch.ts::dispatch`) so the trace stays checkable, not just the filenames. A
 reader who follows it once understands the layering without being told the layering.
+
+Use symbol citations **only** where a wrong claim costs the reader the most: entry points and
+golden-path hops. Don't sprinkle `::symbol` through file tables or role-line prose — every
+symbol citation is one more thing that flags on an innocent rename, and the role line's job is
+the mental model, not the identifier.
 
 **Modules & subsystems** — This is most of the map. Divide by *responsibility*, which often
 but not always matches folders. If one folder holds three unrelated jobs, give it three

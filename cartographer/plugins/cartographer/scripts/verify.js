@@ -15,16 +15,11 @@
 const fs = require("fs");
 const path = require("path");
 const { extractRefs } = require("./refs.js");
+const { standingDocs, resolveRefIn } = require("./docs.js");
 
 const argRoot = process.argv.slice(2).find((a) => !a.startsWith("-"));
 const ROOT = argRoot || process.env.CARTOGRAPHER_PROJECT_DIR || process.env.CLAUDE_PROJECT_DIR || process.cwd();
 
-const DOC_CANDIDATES = [
-  "docs/INDEX.md", "INDEX.md", "docs/GLOSSARY.md", "GLOSSARY.md",
-  "docs/CONVENTIONS.md", "CONVENTIONS.md", "docs/ROADMAP.md", "ROADMAP.md", "CLAUDE.md",
-];
-
-function existsAbs(p) { try { fs.accessSync(p); return true; } catch { return false; } }
 function slugify(s) {
   return s.toLowerCase().replace(/`/g, "").replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-");
 }
@@ -40,23 +35,24 @@ function headingSlugs(absFile) {
   }
   return slugs;
 }
-// Resolve a doc-relative or root-relative path; valid if either exists.
-function resolveRefIn(root, docAbs, target) {
-  const clean = target.replace(/^\.\//, "");
-  for (const c of [path.resolve(path.dirname(docAbs), target), path.resolve(root, clean)]) {
-    if (existsAbs(c)) return c;
-  }
-  return null;
-}
-function listMapParts(root) {
-  try {
-    return fs.readdirSync(path.join(root, "docs", "map")).filter((f) => f.endsWith(".md")).map((f) => "docs/map/" + f);
-  } catch { return []; }
+// Symbol check for `path::symbolName` citations: a word-bound grep of the
+// target file. Language-agnostic by design - no AST, just "does this
+// identifier still appear here". Skipped (returns true) for non-code targets
+// where an identifier search is meaningless, and for anything unreadable.
+const NON_CODE_RE = /\.(md|markdown|mdx|txt|rst|csv|png|jpe?g|gif|svg|ico|pdf|webp|woff2?|ttf|zip|gz|lock)$/i;
+function hasSymbol(targetAbs, symbol) {
+  if (NON_CODE_RE.test(targetAbs)) return true;
+  let txt;
+  try { txt = fs.readFileSync(targetAbs, "utf8"); } catch { return true; }
+  const esc = symbol.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // Word-bound via lookarounds (not \b) so identifiers with $ or _ at the
+  // edges still bound correctly.
+  return new RegExp("(?<![\\w$])" + esc + "(?![\\w$])").test(txt);
 }
 
 function verifyDocs(root) {
   const r = root || ROOT;
-  const docs = [...DOC_CANDIDATES, ...listMapParts(r)].filter((rel) => existsAbs(path.join(r, rel)));
+  const docs = standingDocs(r);
   const findings = [];
   for (const rel of docs) {
     const abs = path.join(r, rel);
@@ -77,6 +73,9 @@ function verifyDocs(root) {
         if (slugs && !slugs.has(ref.anchor.toLowerCase())) {
           findings.push({ doc: rel, line: ref.line, kind: "missing-anchor", ref: ref.raw, detail: "#" + ref.anchor });
         }
+      }
+      if (ref.symbol && !hasSymbol(targetAbs, ref.symbol)) {
+        findings.push({ doc: rel, line: ref.line, kind: "missing-symbol", ref: ref.raw, detail: "::" + ref.symbol });
       }
     }
   }
