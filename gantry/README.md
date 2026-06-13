@@ -16,6 +16,7 @@ Gantry grew out of a real game's `.claude/` workflow for designing and building 
 - **One phase at a time.** The implementer's contract scopes it to a single phase: it builds that phase, then stops and reports. It does not commit and does not advance on its own, and a write it needs outside the phase's file list comes back as reported scope drift rather than a silent expansion. The phase-reviewer then catches any drift on the diff. You verify and commit between every step.
 - **A review before every commit.** The phase-reviewer returns PASS, FAIL, or PASS-WITH-NOTES with specific, fixable findings, so scope drift and convention violations are caught on the diff rather than buried. It also flags **docs impact** — which of the project's standing docs (the map, glossary, conventions) the diff just made stale — so they're refreshed within the same phase instead of rotting.
 - **One command to run it all.** `/gantry:run` drives the whole sequence in order through both review gates (the design review, and a phase review plus a re-review after any fix), pausing only at the decisions and commits that are yours.
+- **A lite lane for small changes.** `/gantry:quick <description>` builds a small, self-contained change tests-first and reviews the diff before you commit, skipping the design and plan stages. It is prompt-level, for when the full pipeline is more than the change needs.
 - **Two living docs that keep the project honest.** A currentness audit answers "what is actually current?" before a cold session trusts an old plan, and a runtime verification queue tracks the gap between "the test suite passes" and "confirmed in a real run".
 
 ## How this differs from what you already have
@@ -75,7 +76,7 @@ That scaffolds `CURRENTNESS_AUDIT.md` and `RUNTIME_VERIFICATION_QUEUE.md` (into 
 
 ## The loop
 
-Once a project is initialized, a feature moves through Gantry one gated step at a time. Run the whole sequence in order with `/gantry:run` (it stops only at the decisions and commits that are yours), or drive it by hand with the commands below. If you do not have a design doc yet, start with `/gantry:draft <idea>`, which interviews you and writes one.
+Once a project is initialized, a feature moves through Gantry one gated step at a time. Run the whole sequence in order with `/gantry:run` (it stops only at the decisions and commits that are yours), or drive it by hand with the commands below. If you do not have a design doc yet, start with `/gantry:draft <idea>`, which interviews you and writes one. For a small, self-contained change where the full pipeline is more than you need, `/gantry:quick <description>` skips straight to a tests-first build and a diff review, then stops for your commit.
 
 1. **Author the design (if you don't have one).** `/gantry:draft <idea>` runs the design-plan-creator: it grills you through the open decisions, grounded in your codebase, then writes a structured design doc to feed the rest of the pipeline.
 2. **Audit the design.** `/gantry:design <draft> [rubric]` runs the design-reviewer over the design doc. It writes a `<draft>_reviewed.md`, fixing resolvable issues and flagging the rest with `[NEEDS USER DECISION]`. Resolve those with Claude, and the design is ready to plan.

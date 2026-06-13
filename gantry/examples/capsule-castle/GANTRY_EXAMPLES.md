@@ -20,6 +20,111 @@ Entries are meant to be uneven. A three-line clean PASS sits next to a long catc
 
 ---
 
+## Balance sim harness — Phase 1 — phase-reviewer — PASS-WITH-NOTES → PASS (2026-06-12)
+
+Plan: `design/balance_sim_harness_design-plan.md` (P1 — production seams). Five sim-mode seams
+(hitstop no-op, `setup_all()` randomize guard, XP-freeze, GlobalState `get_equipped_heroes`
+forwarder, loot `set_seed`) + an `aura_system` null-guard. Suite green 1856/0 both passes.
+
+**First pass — PASS-WITH-NOTES.** Two findings worth more than the green suite:
+
+> **Cross-cutting FAIL — the GlobalState forwarder silently changes gameplay.** Before the forwarder,
+> `globals.has_method("get_equipped_heroes")` returned false, so `castle_roaming_heroes_controller`
+> `_get_equipped_hero_ids()` always returned empty and equipped heroes were shown roaming the castle
+> hub. The forwarder (added so `hero_spawn_manager` stops falling back to `hero_p_1`) makes the method
+> exist → `_get_roaming_hero_ids()` now excludes equipped heroes → they stop roaming. The spawn fix is
+> correct; this is a real, undocumented side effect on a second caller that should be a conscious
+> decision, not a silent consequence of a sim seam.
+
+> **Test-discipline FAIL — the one seam this phase exists to prove has no real coverage.**
+> `test_loot_generator_seeded_instances_produce_identical_rolls` called `set_seed(42)` on two
+> LootGenerators then ignored them and compared two fresh inline `RandomNumberGenerator`s — asserting
+> Godot's RNG-is-deterministic guarantee, not that `LootGenerator.set_seed()` pins the generator. It
+> would pass even if `set_seed` were a no-op.
+
+The roaming side effect went to the human: decision was "equipped heroes correctly stop roaming"
+(latent double-display bug, incidentally fixed) — commit-body note, no code change. The weak test
+was rewritten to drive each generator's real `_rng` and assert same-seed-identical AND
+different-seed-divergent (the no-op detector). A StubHero `_process` cleanup silenced spurious
+`update`-on-Nil errors the tests had been printing.
+
+**Second pass — PASS.** Confirmed no production code changed in the fix pass (the six seam files
+byte-identical to first pass), the rewritten loot test genuinely depends on `set_seed`, the StubHero
+noise is gone. One deferred note to P2 (promote the inline `"sim_mode"` string to a shared const).
+
+### Diff
+
+Seams (`git diff --stat`, production):
+
+```
+ battlegrounds/battleground_setup_orchestrator.gd | randomize() guarded behind Engine.has_meta("sim_mode")
+ systems/combat/hitstop.gd                        | trigger() no-ops under sim flag
+ heroes/hero_base.gd                              | add_experience() early-returns under sim flag
+ systems/global_variables.gd                      | + get_equipped_heroes()/get_hero_selection_pool() forwarders
+ systems/loot/loot_generator.gd                   | + set_seed(seed_value) (additive; _init still randomizes)
+ enemy/components/aura_system.gd                  | null-guard refresh_leech_aura_visual (elite spawn wave >=5)
+ tests/test_sim_seams.gd                          | 15 seam tests (loot-seam test rewritten in fix pass)
+```
+
+---
+
+## Balance sim harness — Phase 0 — implementer — feasibility spike, gate PASSES (2026-06-12, uncommitted throwaway)
+
+Plan: `design/balance_sim_harness_design-plan.md` (P0 — throwaway feasibility spike, no assertions).
+The gate: prove a headless `castle_grounds2` run is possible, pick the fast-forward lever, measure
+variance. Implementer ran the real scene headless and reported, verbatim-trimmed:
+
+> **(a) minutes-per-10-wave:** baseline (no lever) 5.56 min/10-wave (timed out at 9 waves). Lever A
+> (`time_scale=8`) WITHOUT the Hitstop seam died in 19s/1 wave — ineffective, because Hitstop resets
+> `Engine.time_scale` to 0.05 on every hit. Theoretical with Lever A + a Hitstop seam: ~0.625
+> min/10-wave (37.5s). **Under the ~1-min gate, so scope does not shrink.**
+
+> **(b) chosen lever:** Lever A — `Engine.time_scale = 8.0` + `Engine.max_physics_steps_per_frame =
+> 32`, set in-process. **Requires a Hitstop no-op seam in P1** or it does nothing.
+
+> **(c) variance table:** all three probed metrics came back record-only (bands ±32% to ±250%).
+> Cause is the critical finding below, not real balance noise — the variance table is NOT yet
+> meaningful and must be re-measured after P1.
+
+> **Critical finding not in the plan — extreme bimodal variance.** Same seed → 0 to 10 waves across
+> runs, because (1) GlobalState isn't fully reset between probes (hero XP/level carries over) and (2)
+> Hitstop interference with `time_scale=8` is chaotic. Bands can't be derived until P1 lands full
+> state reset + XP-freeze + Hitstop seam + the `randomize()` guard.
+
+> **Modal stall — confirmed (Blocker 3).** `battleground2.tscn` has a real CanvasLayer, so
+> `setup_upgrade_screen` makes `upgrade_screen` non-null; on level-up `scene_tree.paused = true`
+> stalls the run. The queue-drain fallback only works when `upgrade_screen == null`, which it isn't.
+> P1 MUST add an XP-freeze seam.
+
+> **Loadout field — confirmed (Blocker 4).** `GlobalState` does not forward `get_equipped_heroes()`
+> (it lives on `hero_mgr.hero_roster`), so `hero_spawn_manager` silently falls back to `hero_p_1`
+> every run. P1 adds forwarding methods so sticker/base_tier entries attach to the right heroes.
+
+> **Null-guards for P1:** `AuraSystem.refresh_leech_aura_visual` (aura_system.gd:61) null
+> `get_node_or_null` when elites spawn (wave ≥5), pre-existing; `SaveSystem.request_autosave` fires
+> on wave-end and writes to `user://saves/` — the harness must suppress this.
+
+### Why it's a good gate
+
+P0 is a throwaway with no assertions, and its whole value was negative results found cheaply: the
+chosen lever is inert without a seam that doesn't exist yet, and the variance table the plan expected
+P0 to deliver is meaningless until P1's determinism seams land. Both reorder the work — bands move to
+after P1 — and both were found by running the real scene once, before any production code. The gate
+question ("can a 10-wave run get under a minute?") is answered yes (~0.625 min with lever+seam).
+
+### Diff
+
+Throwaway, uncommitted, all under `tools/dev_scripts/` (not `tests/`):
+
+```
+ tools/dev_scripts/sim_spike.gd            | 510   (spike: boot, seed, lever A/B/C, variance probe)
+ tools/dev_scripts/sim_spike.tscn          |   6
+ tools/dev_scripts/sim_run_end_stub.gd     |  13   (RunEndController subclass: flag instead of scene change)
+ tools/dev_scripts/sim_spike_findings.md   | 179   (the three artifacts + P1 seam list)
+```
+
+---
+
 ## Balance sim harness — phase-planner — 5-phase plan, 0 P0 blockers (2026-06-12, plan `design/balance_sim_harness_design-plan.md`)
 
 Design: `design/balance_sim_harness_design.md` (GRILLED + LOCKED). A seeded headless simulator
