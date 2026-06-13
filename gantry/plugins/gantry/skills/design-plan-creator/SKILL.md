@@ -1,7 +1,7 @@
 ---
 name: design-plan-creator
 description: Use when the user wants to design or spec a new feature before building it - phrases like "let's design a cookbook menu", "let's build/add X", "design this feature", "spec this out", "write a design doc / design plan for X", "draft a design", or the /gantry:draft command. Runs a grounded grill: it interrogates the open decisions one branch at a time, resolving each against the real codebase, then writes a buildable design doc the design-reviewer and phase-planner consume. Authors the design only; it never writes code or plans phases.
-version: 0.4.1
+version: 0.5.0
 ---
 
 # Design Plan Creator
