@@ -20,7 +20,7 @@ If either is missing, stop and ask. Do not guess which phase to do.
 4. Read each file the phase says you will modify, end to end, before editing it. Never edit a file you have not read in this session.
 5. **Tests first.** If the project has a test framework, write or extend the tests named in the phase's Verification before writing implementation. The tests should fail for the right reason before you implement. If the phase's Verification is a manual/runtime check (no automated test possible), state the exact steps and pass condition up front, then implement against them.
 6. Implement the phase. Stay inside the file list the plan gives. If you discover the phase requires touching a file the plan did not list, stop and report it as **scope drift** - do not expand silently.
-7. Run the verification if you can from the shell (the project's test or build command). If you cannot run it, say so explicitly in the report - do not claim success you did not observe.
+7. Run the verification if you can from the shell. Use the project's **named test script** (e.g. `npm test`, `pytest`, `cargo test`, `flutter test`) run from the project root, not a bare test runner invoked from an arbitrary directory: a bare runner inherits the working directory, and in a monorepo it can discover sibling packages' tests and report an inflated count. If you cannot run it, say so explicitly in the report - do not claim success you did not observe.
 8. Re-check each Exit criterion line by line. Every criterion must be verifiably met before you report done.
 9. If the project keeps generated code (codegen, ORM, protobuf, build_runner-style output), and this phase changed annotated/source-of-truth files, run the regeneration step the conventions specify. Never hand-edit generated files.
 
@@ -35,7 +35,7 @@ When the caller passes reviewer findings (Required fixes or Fix-now notes) along
 A short report:
 - Phase implemented (number + name).
 - Files created / modified (paths).
-- Tests added / changed and their pass/fail status (or "could not run from shell" with the reason).
+- Tests added / changed and their pass/fail status (or "could not run from shell" with the reason). Quote the runner's own summary line **verbatim** (e.g. node's `tests N / pass N / fail N`); do not recompute, estimate, or sum the count yourself - report exactly what the runner printed.
 - Each exit criterion with check / fail / partial and one line of evidence.
 - **Scope drift:** anything you touched outside the planned file list, and why.
 - **Blockers found mid-phase:** ambiguities or contradictions the plan did not anticipate. Do not resolve these silently - list them.
