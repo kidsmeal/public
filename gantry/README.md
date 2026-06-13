@@ -130,6 +130,16 @@ The value is in the constraints, not the cleverness. Scope drift, a disabled tes
 
 The commit guard stops casual drift, not active evasion. It catches `git commit` and `git push` at command-head positions in a Bash call, including chained commands (`&&`, `;`, `|`, subshells). It does not catch variable indirection (`g=git; $g commit`), `bash -c 'git commit'` where the inner string is a single opaque token, aliases, or similar techniques. That is intentional: the threat model is an agent that runs an unintended commit, not one trying to circumvent enforcement. Opting in via `/gantry:init` adds a `.gantry/enabled` marker; removing that marker makes all guards inert again.
 
+## What a run costs
+
+Rough token cost from a real five-phase run of Gantry on its own enforcement hooks. These count the subagent work (design review, planning, each build and review), not the orchestrating session around them.
+
+- A phase that passes review clean: 75k to 105k tokens.
+- A phase that fails review, gets a fix, and is re-reviewed: 180k to 235k.
+- The full pipeline (design review, plan, five phases): about 560k for a clean run, about 800k for this run, which failed two phase reviews on real bugs and re-ran the design review once.
+
+The gates cost tokens. The two failed reviews in this run are where they paid for themselves: each caught a real bug the passing test suite did not.
+
 ## Non-goals
 
 - **Not a one-shot autopilot.** Gantry is deliberately step-at-a-time. If you want a feature built end to end without stopping, this is the wrong tool: the gates are the product.
