@@ -64,7 +64,7 @@ These shape every decision below — internalize them, don't just skim.
 - **Depth where it counts.** The codebase map earns real length; satellites stay lean. A glossary nobody finishes is useless. Spend your detail budget on the map.
 - **Write for two readers at once.** An AI agent that needs exact paths and wiring, and a human who needs the mental model. Lead with the model, back it with paths.
 - **Map the product, not the workbench.** A repo usually holds files that belong to a developer's *tooling and workflow* rather than the software the repo produces — agent/AI-harness scaffolding (session-continuity files like `NOW.md`/`IDEAS.md`/breadcrumb state, assistant config, slash-command plugins), editor settings, CI scratch, smoke-test artifacts. These describe how someone *works on* the code, not how the code *works*, and they often aren't even the same from one contributor to the next. Keep them out of the subsystem inventory. The test: "would this file exist if a different developer rebuilt the same product?" If no, it's workbench. If such files are genuinely load-bearing for contributors, isolate them in a short, clearly-labeled "Developer tooling / workflow" aside — never interleaved with real modules. When you can't tell whether something is product or tooling, **raise it at the proposal checkpoint instead of silently deciding.**
-- **Write for low drift.** A standing doc rots when the code outruns it, so make rot *slow to happen and cheap to detect*: describe the **slow-changing structure** — module boundaries, data flow, entry points — not the churny detail (every file, every function), and prefer **checkable claims** — cite exact paths and `#anchors`, which the bundled `scripts/verify.js` re-checks — over prose that can quietly go wrong. Cited paths must use forward slashes; backslash paths are not machine-verified by `verify.js`. Coarse and true outlives exhaustive and stale. (`scripts/drift.js` scores how far each doc has lagged the code it cites.)
+- **Write for low drift.** A standing doc rots when the code outruns it, so make rot *slow to happen and cheap to detect*: describe the **slow-changing structure** — module boundaries, data flow, entry points — not the churny detail (every file, every function), and prefer **checkable claims** — cite exact paths, `#anchors`, and (for entry points and golden-path hops) `path::symbol` citations, all of which the bundled `scripts/verify.js` re-checks — over prose that can quietly go wrong. Cited paths must use forward slashes; backslash paths are not machine-verified by `verify.js`. Coarse and true outlives exhaustive and stale. (`scripts/drift.js` scores how far each doc has lagged the code it cites.)
 
 ## Workflow
 
@@ -146,9 +146,24 @@ When the docs already exist and you're *updating* rather than creating, don't re
 scratch — find what drifted and fix only that, so you keep the parts that are still true (and any
 human edits in them).
 
-1. **Find the drift.** Run the bundled freshness checks: `node scripts/verify.js <repo>` flags every cited path or `#anchor` that no longer resolves; `node scripts/drift.js <repo>` scores how many commits have touched the files each doc cites since the doc was last updated, flagging the stale ones. (When Compass Rose is installed, `/compass:doctor` surfaces both for you.)
-2. **Regenerate only what's flagged.** For a doc or section the checks flag, re-read the current code for that area and rewrite just that part. Leave clean docs and sections untouched — augment, never clobber.
+1. **Find the drift.** Run the bundled freshness checks: `node scripts/verify.js <repo>` flags every cited path, `#anchor`, or `::symbol` that no longer resolves; `node scripts/drift.js <repo>` scores each doc **section by section** — how many commits have touched the files each `##` section cites since the doc was last committed — and grades each section `ok` / `aging` / `probably stale` (or `stale (broken refs)` when verify already caught a dead reference in it). The commit count is a churn proxy, not proof the section is wrong. (When Compass Rose is installed, `/compass:doctor` surfaces both for you.)
+2. **Regenerate only the flagged sections.** Drift names the exact section to re-read (`## Modules & subsystems`, not just `INDEX.md`). For each flagged section, re-read the current code for that area and rewrite just that section; treat `aging` as "skim and confirm", `probably stale` and `stale (broken refs)` as "re-derive from the code". Leave clean docs and sections untouched — augment, never clobber.
 3. **Re-verify.** Run `verify.js` again; it should come back clean. Tell the user what you refreshed and why.
+
+## Briefing subagents with map slices
+
+The map pays back fastest when it stops *other* agents from re-exploring the repo. When you
+orchestrate subagents in a mapped repo, don't send each one in cold — brief it with a slice:
+
+```
+node scripts/slice.js <path-or-keyword> [repo]
+```
+
+This prints just the INDEX / `docs/map/*` sections that cite the given file (or mention the
+keyword in a heading), as paste-ready markdown. One orchestrator pulling a slice per subagent
+replaces N subagents each globbing and grepping their way to the same structure — every cold
+context the slice spares multiplies what the map already saved. Put the slice at the top of the
+subagent's prompt, alongside its task.
 
 ## Adapting to the repo
 
