@@ -1,7 +1,7 @@
 ---
 name: gantry
 description: Use to run a feature through the full Gantry pipeline in the correct order with both review gates - phrases like "run this through gantry", "gantry pipeline", "plan and build this with reviews", "drive the gated build end to end", or the /gantry:run command. Orchestrates design-plan-creator (if needed) -> design-reviewer -> phase-planner -> per phase (implementer -> phase-reviewer, re-reviewing after any fix), pausing only at the human gates (unresolved decisions, plan blockers, every commit). Not for quick one-off edits.
-version: 0.6.0
+version: 0.7.0
 ---
 
 # Gantry pipeline orchestrator
@@ -16,6 +16,13 @@ Two reviews are built in and neither is skippable:
 1. **Get the design.** Take the design doc path from the user or the command args. If they only have an idea and no design doc, run the **design-plan-creator** skill first to author one, then continue. The orchestrator needs at least a draft design to work from.
 2. **Confirm the project is initialized.** `CURRENTNESS_AUDIT.md` and `RUNTIME_VERIFICATION_QUEUE.md` should exist and the project's conventions + test command should be known. If not, run `/gantry:init` first.
 3. Keep inter-stage chatter terse: relay each agent's summary, say which gate you are at, and move.
+
+## Backend dispatch (applies to every agent in this skill)
+Each agent runs on the model backend configured for its role in `.gantry/models.json`. Wherever a stage below says "spawn the design-reviewer / phase-planner / implementer / phase-reviewer", it means: first run `node ${CLAUDE_PLUGIN_ROOT}/scripts/role.js resolve <role>`, then
+- `DISPATCH: native` → spawn that subagent via the Task tool (use the model it names). This is the default and needs no setup.
+- `DISPATCH: external` → run `node ${CLAUDE_PLUGIN_ROOT}/scripts/role.js run <role> -- <inputs>` and use its stdout as that agent's output instead of spawning the subagent. The `<inputs>` are the same arguments you would have passed the subagent (e.g. the plan path and phase number). On failure (CLI missing/unauthed/non-zero exit), report it and fall back to the native subagent so no gate is ever skipped.
+
+The implementer is special: `role.js` only allows it on a harness backend (`native` or `claude-headless`) and injects the phase-enforcement guards for the headless case, so the file-list and commit guards apply no matter which model implements. The verdict/report you relay is identical either way; this choice only changes which model produces it.
 
 ## Stage 1 - Design review (review gate 1)
 1. Spawn the **design-reviewer** on the draft (and the project's rubric if one exists). Relay its summary.

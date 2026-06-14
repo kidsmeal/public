@@ -12,7 +12,11 @@ Resolve a plan file and a phase number from those arguments before doing anythin
 
 Use the resolved plan path and phase number (`<plan>` and `<phase>` below), NOT the raw argument tokens, in every command and subagent call.
 
-Spawn the **phase-reviewer** subagent (read-only) to review the current uncommitted diff against the plan, passing it the resolved `<plan>` and `<phase>`.
+**Dispatch the phase-reviewer to its configured model backend.** Run `node ${CLAUDE_PLUGIN_ROOT}/scripts/role.js resolve phase-reviewer`:
+- If it prints `DISPATCH: native`: spawn the **phase-reviewer** subagent (read-only) via the Task tool to review the current uncommitted diff against the plan, passing it the resolved `<plan>` and `<phase>` (use the model the resolve output names).
+- If it prints `DISPATCH: external`: run `node ${CLAUDE_PLUGIN_ROOT}/scripts/role.js run phase-reviewer -- <plan> <phase>` and treat its stdout as the reviewer's verdict. The external reviewer gathers the diff itself; do not also spawn the subagent. If the run fails (CLI missing, not authed, non-zero exit), report that and fall back to the native subagent so the gate is never skipped.
+
+The reviewer is read-only and produces a verdict either way; everything below treats that verdict identically.
 
 Relay the agent's verdict verbatim - PASS / FAIL / PASS-WITH-NOTES - and its specific findings, including the Docs impact section listing any standing docs (`docs/INDEX.md`, `docs/GLOSSARY.md`, `docs/CONVENTIONS.md`) the diff made stale, each tagged mechanical or judgment. Handle them by tag: a **mechanical** flag (doc still references a moved/renamed/deleted path) you fix immediately yourself - plain text edit, no design decision - and report as refreshed. A **judgment** flag goes to the ledger: append it to `CURRENTNESS_AUDIT.md`'s `## Open doc flags` section as `- [ ] <doc path>: <one line, what the diff invalidated> (phase N, <feature or plan name>)`, for `/gantry:audit` to reconcile; if no audit file exists, skip and note that `/gantry:init` would enable it.
 - On **FAIL**: do not commit. Before re-spawning the implementer for the fix pass, run: `node ${CLAUDE_PLUGIN_ROOT}/scripts/sentinel.js add-files <space-separated list of the reviewer's cited file paths>` (this widens the active sentinel so the fix pass can touch exactly those files). Then send the Required fixes back to the implementer via `/gantry:build <plan> <phase>`, and re-review. Repeat up to 2 cycles; if still failing, stop and hand it to me.

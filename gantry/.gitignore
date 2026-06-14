@@ -1,0 +1,4 @@
+# Gantry local/transient run state (not shared across machines)
+.gantry/active-phase.json
+.gantry/models.json
+.gantry/headless-implementer-settings.json

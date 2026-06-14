@@ -35,7 +35,7 @@ The first question is usually "doesn't plan mode or an agent team already do thi
 
 Plugin readers check the source before they trust it, so here is the posture plainly.
 
-Gantry runs plain Node.js scripts on the runtime Claude Code already bundles. Zero dependencies, no network calls, no telemetry, no API keys. It works on local files and ordinary git.
+Gantry runs plain Node.js scripts on the runtime Claude Code already bundles. Zero dependencies, no telemetry. It works on local files and ordinary git.
 
 Its hooks, when you opt in through `/gantry:init`, only ever return allow or deny on a tool call. They never rewrite your commands and never touch tool output. That line matters: a `PreToolUse` hook that rewrites commands or filters output can silently corrupt what the agent reads, and an agent acting on a corrupted read can write garbage to disk. Gantry's guards cannot do that by construction, and they fail open, so any error in a guard allows the call instead of blocking it. The guards and their limits are described under "Why the gates matter".
 
@@ -96,6 +96,7 @@ Most of the time you run one command. `/gantry:run` drives the whole pipeline th
 | `/gantry:run <design> [rubric]` | The front door. Run the whole pipeline in order, through both review gates, gating only on your decisions and commits. |
 | `/gantry:quick <description>` | The lite lane. Build a small change tests-first, review the diff, stop for your commit. No design, plan, or hooks. |
 | `/gantry:init` | Scaffold the two audit docs and detect the project's conventions and test/build commands. |
+| `/gantry:models` | View or change which model backend each role runs on (reviewers/planner can use external models like codex; the implementer stays on the Claude Code harness). |
 | `/gantry:draft <idea>` | Grill out a buildable design doc from an idea, one decision at a time, grounded in the codebase. |
 | `/gantry:design <draft> [rubric]` | Audit a design against a rubric or a generic checklist before planning. |
 | `/gantry:plan <design>` | Turn a finalized design into a phased implementation plan. |

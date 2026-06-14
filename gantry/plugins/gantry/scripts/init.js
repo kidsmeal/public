@@ -3,19 +3,24 @@
  * Gantry init - the /gantry:init command.
  *
  * Scaffolds the two living audit docs (CURRENTNESS_AUDIT.md and
- * RUNTIME_VERIFICATION_QUEUE.md) into the project from the bundled templates,
- * never overwriting an existing file. Then it sniffs the repo for the facts the
- * agents need to be project-agnostic - the project's convention/style files and
- * its test/build commands - and prints them, so the /gantry:init command can
- * finish wiring the pipeline to THIS project instead of guessing.
+ * RUNTIME_VERIFICATION_QUEUE.md) and the model-backend config
+ * (.gantry/models.json) into the project from the bundled defaults, never
+ * overwriting an existing file. Then it sniffs the repo for the facts the
+ * agents need to be project-agnostic - the project's convention/style files,
+ * its test/build commands, and which external agent CLIs are available - and
+ * prints them, so the /gantry:init command can finish wiring the pipeline to
+ * THIS project instead of guessing.
  *
- * Pure scaffolding + read-only detection. It writes only the two template files
- * (when absent) and nothing else.
+ * It also gitignores the local/transient .gantry run files (unconditionally,
+ * since models.json is scaffolded on every run and is per-machine). Everything
+ * else is read-only detection. The sole opt-in-gated write is the
+ * .gantry/enabled marker, written only with --enable-hooks.
  */
 "use strict";
-const { execFileSync } = require("child_process");
+const { execFileSync, spawnSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
+const roleCore = require("./role-core.js");
 
 const ROOT = process.env.GANTRY_PROJECT_DIR || process.env.CLAUDE_PROJECT_DIR || process.cwd();
 const TEMPLATES = path.join(__dirname, "..", "templates");
@@ -49,6 +54,80 @@ for (const name of ["CURRENTNESS_AUDIT.md", "RUNTIME_VERIFICATION_QUEUE.md"]) {
     failed.push(relDest + " (" + e.message + ")");
   }
 }
+
+// Scaffold the model-backend config (.gantry/models.json). All roles default to
+// the native in-session subagent, so the pipeline behaves exactly as before
+// until a role is flipped to an external backend via /gantry:models. This is
+// per-machine config (its backends depend on which CLIs and API keys exist
+// locally), so it is gitignored below rather than shared. Never overwrites an
+// existing file.
+let modelsStatus;
+if (exists(path.join(".gantry", "models.json"))) {
+  modelsStatus = "kept existing .gantry/models.json";
+} else {
+  try {
+    fs.mkdirSync(path.join(ROOT, ".gantry"), { recursive: true });
+    fs.writeFileSync(
+      path.join(ROOT, ".gantry", "models.json"),
+      JSON.stringify(roleCore.DEFAULT_CONFIG, null, 2) + "\n"
+    );
+    modelsStatus = "created .gantry/models.json (all roles native)";
+  } catch (e) {
+    modelsStatus = "could not write .gantry/models.json (" + e.message + ")";
+  }
+}
+
+// Gitignore the local/transient .gantry files - additive and idempotent, and
+// unconditional because models.json (per-machine config) is scaffolded on every
+// init, so it must be ignored on every init too. active-phase.json and the
+// headless settings are transient run state. The hook opt-in marker
+// (.gantry/enabled) is deliberately NOT ignored - it is shared, team-wide state.
+const GITIGNORE_ENTRIES = [
+  ".gantry/active-phase.json",                  // transient sentinel
+  ".gantry/models.json",                        // per-machine backend config
+  ".gantry/headless-implementer-settings.json", // transient guard injection
+];
+{
+  const gitignorePath = path.join(ROOT, ".gitignore");
+  try {
+    const present = fs.existsSync(gitignorePath);
+    const content = present ? fs.readFileSync(gitignorePath, "utf8") : "";
+    if (!present) {
+      fs.writeFileSync(gitignorePath, GITIGNORE_ENTRIES.join("\n") + "\n");
+      console.log("  Created .gitignore with " + GITIGNORE_ENTRIES.join(", ") + ".");
+    } else {
+      const lines = content.split(/\r?\n/);
+      const toAppend = [];
+      for (const entry of GITIGNORE_ENTRIES) {
+        if (lines.some((l) => l.trim() === entry)) {
+          console.log("  .gitignore already contains " + entry + ".");
+        } else {
+          toAppend.push(entry);
+        }
+      }
+      if (toAppend.length) {
+        // Leading newline if the file does not already end with one, so the
+        // first appended entry lands on its own line.
+        const needsNewline = content.length > 0 && !content.endsWith("\n");
+        fs.appendFileSync(gitignorePath, (needsNewline ? "\n" : "") + toAppend.join("\n") + "\n");
+        for (const e of toAppend) console.log("  Appended " + e + " to .gitignore.");
+      }
+    }
+  } catch (e) {
+    console.error("! Gantry: could not update .gitignore: " + e.message);
+  }
+}
+
+// Which external agent CLIs are available, so the command can tailor its
+// model-backend guidance. Best-effort; absent CLIs report [missing] quickly.
+function onPath(cmd) {
+  try {
+    const r = spawnSync(cmd + " --version", { stdio: "ignore", shell: true, timeout: 8000 });
+    return !r.error && r.status === 0;
+  } catch { return false; }
+}
+const cliStatus = ["codex", "claude", "gemini"]
+  .map((c) => c + (onPath(c) ? " [found]" : " [missing]"));
 
 // Convention / style files the agents should read for THIS project.
 const CONVENTION_CANDIDATES = [
@@ -106,14 +185,12 @@ if (failed.length) {
 // installed plugin (CLAUDE_PLUGIN_ROOT is set by the plugin host).
 //
 // Default run (no --enable-hooks flag): report that enforcement is available
-// but NOT enabled, and print how to enable it. Do NOT write .gantry/enabled
-// and do NOT touch .gitignore.
+// but NOT enabled, and print how to enable it. Do NOT write .gantry/enabled.
 //
-// With --enable-hooks flag: write the .gantry/enabled marker so the
-// PreToolUse guards become active, and ensure .gantry/active-phase.json is
-// gitignored (transient run state).
+// With --enable-hooks flag: write the .gantry/enabled marker so the PreToolUse
+// guards become active. (Gitignoring the transient/local .gantry files is done
+// unconditionally above, not here, since models.json is scaffolded every run.)
 if (process.env.CLAUDE_PLUGIN_ROOT) {
-  const GITIGNORE_ENTRY = ".gantry/active-phase.json";
   const enableHooks = process.argv.includes("--enable-hooks");
 
   if (!enableHooks) {
@@ -125,9 +202,7 @@ if (process.env.CLAUDE_PLUGIN_ROOT) {
       "  in /gantry:init (it will run: node \"" + __filename + "\" --enable-hooks)."
     );
   } else {
-    // Explicit opt-in: write the marker and update .gitignore.
-
-    // Write .gantry/enabled marker (empty file).
+    // Explicit opt-in: write the .gantry/enabled marker (empty file).
     const gantryDir = path.join(ROOT, ".gantry");
     const markerPath = path.join(gantryDir, "enabled");
     try {
@@ -140,30 +215,6 @@ if (process.env.CLAUDE_PLUGIN_ROOT) {
       }
     } catch (e) {
       console.error("! Gantry: could not write .gantry/enabled: " + e.message);
-    }
-
-    // Ensure .gantry/active-phase.json is gitignored - additive and idempotent.
-    const gitignorePath = path.join(ROOT, ".gitignore");
-    try {
-      if (!fs.existsSync(gitignorePath)) {
-        fs.writeFileSync(gitignorePath, GITIGNORE_ENTRY + "\n");
-        console.log("  Created .gitignore with " + GITIGNORE_ENTRY + ".");
-      } else {
-        const content = fs.readFileSync(gitignorePath, "utf8");
-        const lines = content.split(/\r?\n/);
-        const alreadyPresent = lines.some((l) => l.trim() === GITIGNORE_ENTRY);
-        if (!alreadyPresent) {
-          // Append with a trailing newline; add a leading newline if the file
-          // does not already end with one, so the entry is on its own line.
-          const needsNewline = content.length > 0 && !content.endsWith("\n");
-          fs.appendFileSync(gitignorePath, (needsNewline ? "\n" : "") + GITIGNORE_ENTRY + "\n");
-          console.log("  Appended " + GITIGNORE_ENTRY + " to .gitignore.");
-        } else {
-          console.log("  .gitignore already contains " + GITIGNORE_ENTRY + ".");
-        }
-      }
-    } catch (e) {
-      console.error("! Gantry: could not update .gitignore: " + e.message);
     }
   }
 }
@@ -179,3 +230,12 @@ if (detected.length) {
 } else {
   console.log("Detected stack: none recognized - ask the user for the test and build commands.");
 }
+
+console.log("\n--- Model backends ---");
+console.log("Config: " + modelsStatus);
+console.log("External agent CLIs: " + cliStatus.join("  "));
+console.log(
+  "Roles default to native (in-session Claude subagent). Use /gantry:models to\n" +
+  "route reviewers/planner to an external model (e.g. codex). The implementer is\n" +
+  "pinned to the Claude Code harness so the enforcement hooks always fire."
+);

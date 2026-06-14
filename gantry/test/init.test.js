@@ -123,16 +123,17 @@ test("detects Gradle and Ruby stacks independently of other manifests", () => {
 // Plugin-native hook opt-in (CLAUDE_PLUGIN_ROOT gated)
 // ---------------------------------------------------------------------------
 
-// Default run (no --enable-hooks flag): even with CLAUDE_PLUGIN_ROOT set,
-// the marker and .gitignore must NOT be written. Only a detection report is
-// printed to inform the user that enforcement is available but not enabled.
-test("with CLAUDE_PLUGIN_ROOT set (default run): does NOT write .gantry/enabled or .gitignore", () => {
+// Default run (no --enable-hooks flag): the opt-in MARKER must NOT be written
+// (enforcement stays inert). The .gitignore IS written though, because
+// models.json (per-machine config) is scaffolded every run and must be ignored.
+test("with CLAUDE_PLUGIN_ROOT set (default run): does NOT write .gantry/enabled, but gitignores models.json", () => {
   const dir = mk();
   try {
     const r = runEnv(dir, { CLAUDE_PLUGIN_ROOT: "/fake/plugin/root" });
     assert.equal(r.status, 0, r.stderr);
     assert.ok(!fs.existsSync(path.join(dir, ".gantry", "enabled")), ".gantry/enabled must NOT be created on default run");
-    assert.ok(!fs.existsSync(path.join(dir, ".gitignore")), ".gitignore must NOT be created on default run");
+    const gi = fs.readFileSync(path.join(dir, ".gitignore"), "utf8");
+    assert.ok(gi.includes(".gantry/models.json"), "per-machine models.json must be gitignored even on default run");
     assert.match(r.stdout, /enforcement is available but NOT enabled/);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
@@ -180,12 +181,26 @@ test("with CLAUDE_PLUGIN_ROOT set and --enable-hooks: appends entry once to exis
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
-test("with CLAUDE_PLUGIN_ROOT unset: writes neither .gantry/enabled nor .gitignore", () => {
+test("with CLAUDE_PLUGIN_ROOT set and --enable-hooks: gitignores models.json and the headless settings too", () => {
+  const dir = mk();
+  try {
+    const r = runEnvArgs(dir, { CLAUDE_PLUGIN_ROOT: "/fake/plugin/root" }, ["--enable-hooks"]);
+    assert.equal(r.status, 0, r.stderr);
+    const gi = fs.readFileSync(path.join(dir, ".gitignore"), "utf8");
+    assert.ok(gi.includes(".gantry/models.json"), ".gitignore should ignore the per-machine models.json");
+    assert.ok(gi.includes(".gantry/headless-implementer-settings.json"), ".gitignore should ignore the transient headless settings");
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("with CLAUDE_PLUGIN_ROOT unset: writes no .gantry/enabled, but still gitignores models.json", () => {
   const dir = mk();
   try {
     const r = runEnv(dir, { CLAUDE_PLUGIN_ROOT: undefined });
     assert.equal(r.status, 0, r.stderr);
     assert.ok(!fs.existsSync(path.join(dir, ".gantry", "enabled")), ".gantry/enabled must NOT be created when CLAUDE_PLUGIN_ROOT is unset");
-    assert.ok(!fs.existsSync(path.join(dir, ".gitignore")), ".gitignore must NOT be created when CLAUDE_PLUGIN_ROOT is unset");
+    // A manual (non-plugin) copy still scaffolds models.json, so it must still
+    // be gitignored - leaving per-machine config un-ignored is the bug.
+    const gi = fs.readFileSync(path.join(dir, ".gitignore"), "utf8");
+    assert.ok(gi.includes(".gantry/models.json"), "models.json must be gitignored even for a manual copy");
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });

@@ -20,6 +20,10 @@ node ${CLAUDE_PLUGIN_ROOT}/scripts/sentinel.js write <plan> <phase>
 
 This writes the active-phase sentinel (`.gantry/active-phase.json`) with the phase's file list before the implementer's first edit, so the file-list guard is active from the first tool call. If the project has not opted in (no `.gantry/enabled` marker), the guard is inert and this call is a harmless no-op; run it regardless.
 
-Spawn the **implementer** subagent to implement exactly ONE phase, passing it the resolved `<plan>` and `<phase>`.
+**Dispatch the implementer to its configured model backend.** Run `node ${CLAUDE_PLUGIN_ROOT}/scripts/role.js resolve implementer`:
+- `DISPATCH: native`: spawn the **implementer** subagent (use the model the resolve output names) to implement exactly ONE phase, passing it the resolved `<plan>` and `<phase>`.
+- `DISPATCH: external`: run `node ${CLAUDE_PLUGIN_ROOT}/scripts/role.js run implementer -- <plan> <phase>` and treat its stdout as the implementer's report. This runs a headless `claude -p` **inside the Claude Code harness with the phase-enforcement guards injected**, so the file-list and commit guards apply exactly as they do for the native implementer. On failure (CLI missing/unauthed/non-zero), report it and fall back to the native subagent.
+
+`role.js` refuses any implementer backend that is not `native` or `claude-headless`, so the implementer can never run somewhere the hooks cannot see it. The sentinel written above is what those guards enforce against, native or headless alike.
 
 The implementer works tests-first (where a test framework exists), stays inside the plan's file list, will not commit, and will not advance past the one phase. When it returns, relay its report verbatim: files changed, test status, each exit criterion, scope drift, and any blockers it hit. Set the phase's `**Status:**` line in the plan to `built` (the implementer never edits the plan; you do). Then stop and recommend `/gantry:review <plan> <phase>` before I commit. Do not start the next phase, and do not commit.
