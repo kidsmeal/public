@@ -34,6 +34,7 @@ For each phase, list:
 - **Verification** - how this phase is proven done. Prefer the project's test framework if one exists (detect it: `package.json` scripts, `pytest`, `flutter test`, `cargo test`, `go test`, GdUnit, `dotnet test`, etc.). If no automated test fits, specify a concrete manual or runtime check with a clear pass condition - never "looks right".
 - **Exit criteria** - what "done" looks like before the next phase starts.
 - **Blockers / open questions** - anything the design doc left unresolved.
+- **Wires / Wired-by** *(optional; include only on phases that add a public capability - an exported function, system, command, bus event, or user-facing control)* - one line declaring the wiring relationship. Three forms: `Wires: <live caller this phase adds>` (this phase wires an existing capability); `Wired-by: phase N` (the capability introduced here is wired in phase N; the reviewer flags it unreachable if phase N passed without doing so); `Wired-by: deferred (...)` or `Wired-by: none (...)` (the capability is intentionally unwired now, with a short reason). A phase with no new public capability omits this field entirely.
 
 ## Cross-cutting concerns (separate section, always)
 Call out anything that touches multiple systems or breaks a contract, even if it is also mentioned inside a phase. These need explicit visibility:
@@ -68,6 +69,7 @@ Verification command(s): <the project's test/build commands you will rely on>
 **Verification:** ...
 **Exit criteria:** ...
 **Blockers:** ...
+**Wires:** ... *or* **Wired-by:** ... *(omit if this phase adds no public capability)*
 
 ## Phase 2: ...
 

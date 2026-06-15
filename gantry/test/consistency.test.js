@@ -124,3 +124,81 @@ test("phase-reviewer.md carries scope-calibration rule", () => {
     "phase-reviewer.md scope-calibration must route plan-omitted files to fix-now notes"
   );
 });
+
+test("phase-planner.md per-phase block includes the optional Wires/Wired-by field", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "agents", "phase-planner.md"), "utf8"
+  );
+  assert.ok(
+    text.includes("Wires:"),
+    "phase-planner.md must document the Wires: field form"
+  );
+  assert.ok(
+    text.includes("Wired-by:"),
+    "phase-planner.md must document the Wired-by: field form"
+  );
+  assert.ok(
+    /per.phase/i.test(text) || text.includes("per-phase"),
+    "phase-planner.md must describe the wiring field as per-phase (not a global section)"
+  );
+  assert.ok(
+    /public\s+capability/i.test(text) || text.includes("public capability"),
+    "phase-planner.md must scope the wiring field to phases that add a public capability"
+  );
+  // The field must live inside the per-phase block alongside Status/Goal/Files/Exit criteria,
+  // not as a standalone section heading. Verify the block list includes it.
+  assert.ok(
+    /Status.*Goal.*Files/s.test(text),
+    "phase-planner.md must still list Status / Goal / Files in its per-phase block"
+  );
+});
+
+test("phase-planner.md wiring field documents all three Wired-by forms", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "agents", "phase-planner.md"), "utf8"
+  );
+  assert.ok(
+    /Wired-by:\s+phase\s+\d/i.test(text) || text.includes("Wired-by: phase N") || /Wired-by: phase/.test(text),
+    "phase-planner.md must document the 'Wired-by: phase N' form"
+  );
+  assert.ok(
+    /Wired-by:\s+deferred/i.test(text) || text.includes("Wired-by: deferred"),
+    "phase-planner.md must document the 'Wired-by: deferred (...)' form"
+  );
+  assert.ok(
+    /Wired-by:\s+none/i.test(text) || text.includes("Wired-by: none"),
+    "phase-planner.md must document the 'Wired-by: none (...)' form"
+  );
+});
+
+test("implementer.md verification step carries the real-input rule", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "agents", "implementer.md"), "utf8"
+  );
+  assert.ok(
+    text.includes("real-input") || text.includes("real input"),
+    "implementer.md must include a real-input rule in its verification step"
+  );
+  assert.ok(
+    /real\s+shipped\s+file/i.test(text) || text.includes("real shipped file") || text.includes("real shipped artifact"),
+    "implementer.md real-input rule must require loading the real shipped file/artifact"
+  );
+  assert.ok(
+    /fixture.only/i.test(text) || text.includes("fixture-only"),
+    "implementer.md must state that fixture-only is insufficient for real-input code"
+  );
+});
+
+test("implementer.md real-input rule names the browser/device fallback", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "agents", "implementer.md"), "utf8"
+  );
+  assert.ok(
+    /browser|device/i.test(text),
+    "implementer.md must name the browser/device fallback for the real-input rule"
+  );
+  assert.ok(
+    /manual\s+real.input\s+check|stated\s+manual/i.test(text) || text.includes("manual real-input check") || text.includes("stated manual"),
+    "implementer.md must describe the fallback as a stated manual real-input check"
+  );
+});
