@@ -42,6 +42,10 @@ const VALID_ROLES = [
   "phase-reviewer",
 ];
 
+// Roles that may carry an adversary. The implementer and phase-planner must
+// never run off-harness, so their adversary key is ignored even when present.
+const REVIEWER_ROLES = ["design-reviewer", "phase-reviewer"];
+
 // The backend types resolveRole knows how to dispatch and buildInvocation knows
 // how to run. An unknown type is an ordinary config error (caught at resolve,
 // fail-safe to native), never an external dispatch that throws later at run.
@@ -191,7 +195,7 @@ function resolveRole(config, role) {
     };
   }
 
-  return {
+  const primaryResult = {
     role,
     error: null,
     dispatch: type === "native" ? "native" : "external",
@@ -200,6 +204,54 @@ function resolveRole(config, role) {
     model,
     backend,
   };
+
+  // Non-reviewer roles (implementer, phase-planner) must never run an adversary:
+  // their execution model does not support a second-opinion pass, and their
+  // adversary key is silently ignored. Signal that to callers (e.g. role.js
+  // show/resolve) so they can warn the user rather than losing the config key
+  // with no feedback. No error, no throw - purely additive.
+  if (!REVIEWER_ROLES.includes(role) && assignment.adversary) {
+    primaryResult.adversaryIgnored = true;
+  }
+
+  // Adversary resolution: only for reviewer roles, and only when configured.
+  // Implemented as a fail-safe inner path: any malformed adversary entry yields
+  // no adversary on the return (the primary result is unaffected). The
+  // HARNESS_SAFE_TYPES implementer lock never applies here.
+  if (REVIEWER_ROLES.includes(role) && assignment.adversary) {
+    const adv = assignment.adversary;
+    // Resolve the adversary's backend and model through the same validation as
+    // the primary. Any step that would normally return an error instead causes
+    // a silent fail-safe: no adversary descriptor on the return.
+    const advBackendName = adv.backend;
+    if (advBackendName) {
+      const advBackend =
+        (cfg.backends && cfg.backends[advBackendName]) ||
+        DEFAULT_CONFIG.backends[advBackendName];
+      if (advBackend) {
+        const advType = advBackend.type;
+        const advModel = adv.model || advBackend.model || null;
+        if (
+          KNOWN_BACKEND_TYPES.includes(advType) &&
+          (advType === "native" || advModel)
+        ) {
+          const advDispatch = advType === "native" ? "native" : "external";
+          const isSameAsPrimary =
+            advBackendName === backendName && advModel === model;
+          primaryResult.adversary = {
+            backendName: advBackendName,
+            type: advType,
+            model: advModel,
+            dispatch: advDispatch,
+            backend: advBackend,
+            ...(isSameAsPrimary ? { adversarySameAsPrimary: true } : {}),
+          };
+        }
+      }
+    }
+  }
+
+  return primaryResult;
 }
 
 // Substitute {placeholder} tokens in a command template. Only used for values
@@ -367,6 +419,7 @@ function buildGuardSettings(fileListGuardPath, commitGuardPath) {
 module.exports = {
   HARNESS_SAFE_TYPES,
   VALID_ROLES,
+  REVIEWER_ROLES,
   DEFAULT_CONFIG,
   parseConfig,
   resolveRole,
