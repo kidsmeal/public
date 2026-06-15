@@ -202,3 +202,91 @@ test("implementer.md real-input rule names the browser/device fallback", () => {
     "implementer.md must describe the fallback as a stated manual real-input check"
   );
 });
+
+test("SKILL.md Stage 3 retains the 2 fix-and-re-review cycles cap unchanged", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "skills", "gantry", "SKILL.md"), "utf8"
+  );
+  assert.ok(
+    text.includes("2 fix-and-re-review cycles"),
+    "SKILL.md must retain the literal '2 fix-and-re-review cycles' cap value unchanged"
+  );
+});
+
+test("review.md retains the 'up to 2 cycles' cap unchanged", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "commands", "review.md"), "utf8"
+  );
+  assert.ok(
+    text.includes("up to 2 cycles"),
+    "review.md must retain the literal 'up to 2 cycles' cap value unchanged"
+  );
+});
+
+test("SKILL.md cap-hit escalation includes trajectory read", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "skills", "gantry", "SKILL.md"), "utf8"
+  );
+  assert.ok(
+    text.includes("trajectory"),
+    "SKILL.md cap-hit escalation must include a finding trajectory read"
+  );
+  assert.ok(
+    /shrinking/i.test(text),
+    "SKILL.md trajectory read must describe shrinking findings as a deep phase worth continuing"
+  );
+  assert.ok(
+    /recurring/i.test(text),
+    "SKILL.md trajectory read must describe recurring findings as stuck"
+  );
+});
+
+test("SKILL.md cap-hit escalation presents the three options", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "skills", "gantry", "SKILL.md"), "utf8"
+  );
+  assert.ok(
+    /keep\s+iterating/i.test(text),
+    "SKILL.md cap-hit escalation must present the 'keep iterating' option"
+  );
+  assert.ok(
+    /amend/i.test(text),
+    "SKILL.md cap-hit escalation must present the 'amend the plan' option"
+  );
+  assert.ok(
+    /overrule/i.test(text),
+    "SKILL.md cap-hit escalation must present the 'overrule with a logged reason' option"
+  );
+});
+
+test("SKILL.md cap-hit escalation states it never auto-passes", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "skills", "gantry", "SKILL.md"), "utf8"
+  );
+  assert.ok(
+    /never\s+auto.pass|auto.pass/i.test(text),
+    "SKILL.md must state that the cap-hit escalation never auto-passes"
+  );
+});
+
+test("review.md cap-hit handling includes trajectory read and three options", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "commands", "review.md"), "utf8"
+  );
+  assert.ok(
+    text.includes("trajectory"),
+    "review.md cap-hit handling must include a finding trajectory read"
+  );
+  assert.ok(
+    /keep\s+iterating/i.test(text),
+    "review.md cap-hit handling must present the 'keep iterating' option"
+  );
+  assert.ok(
+    /amend/i.test(text),
+    "review.md cap-hit handling must present the 'amend the plan' option"
+  );
+  assert.ok(
+    /overrule/i.test(text),
+    "review.md cap-hit handling must present the 'overrule with a logged reason' option"
+  );
+});
