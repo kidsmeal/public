@@ -12,14 +12,21 @@
  *       the orchestrator branches on:
  *         DISPATCH: native    -> spawn the <role> subagent via the Task tool
  *         DISPATCH: external  -> run `role.js run <role> -- <inputs>` and relay
- *       Exits non-zero (with the reason) on an invalid assignment - notably an
- *       implementer routed off the Claude Code harness.
+ *       Always prints an ADVERSARY: line after the primary block (a descriptor
+ *       when one is configured and valid, or "ADVERSARY: none"). Exits non-zero
+ *       (with the reason) on an invalid assignment - notably an implementer
+ *       routed off the Claude Code harness.
  *
- *   run <role> [-- <inputs...>]
+ *   run <role> [--adversary] [-- <inputs...>]
  *       Run a NON-native backend: compose the prompt from the agent .md body
  *       plus <inputs>, spawn the backend, stream its stderr (progress) through,
  *       and print its stdout (the agent's final output) for the orchestrator to
  *       relay. Errors for a native role (those are Task-spawned, not run here).
+ *       With --adversary, runs the role's configured adversary backend instead
+ *       of the primary, using the same agent .md body plus a one-line note that
+ *       it is the adversarial final pass on an already-primary-passed diff.
+ *       A native adversary is refused (use the Task tool for native roles). An
+ *       adversary identical to the primary is refused (warn and exit non-zero).
  *
  *   detect
  *       Report which external agent CLIs (codex, claude, gemini) are on PATH.
@@ -27,6 +34,7 @@
  *
  *   show
  *       Print the resolved backend for every role. Used by /gantry:models.
+ *       Includes an adversary line for each reviewer role.
  *
  *   write-default
  *       Write .gantry/models.json with the all-native default if it is absent.
@@ -71,6 +79,39 @@ function fail(msg) {
 
 // --- resolve ---
 
+// Print the ADVERSARY: line that follows every primary dispatch block. When the
+// adversary descriptor is present and not identical to the primary, prints a
+// one-line summary of the adversary backend. When the adversary is identical to
+// the primary, warns to stderr and prints ADVERSARY: none (skip). When there is
+// no adversary, prints ADVERSARY: none. Also handles adversaryIgnored (a config
+// key on a non-reviewer role).
+function printAdversaryLine(r, role) {
+  if (r.adversaryIgnored) {
+    process.stderr.write(
+      "role.js: adversary key on '" + role + "' is ignored" +
+      " (adversary is only honored on reviewer roles: " +
+      core.REVIEWER_ROLES.join(", ") + ").\n"
+    );
+  }
+  if (!r.adversary) {
+    console.log("ADVERSARY: none");
+    return;
+  }
+  const adv = r.adversary;
+  if (adv.adversarySameAsPrimary) {
+    process.stderr.write(
+      "role.js: adversary for '" + role + "' is identical to the primary" +
+      " (same backend and model). Skipping adversary.\n"
+    );
+    console.log("ADVERSARY: none (identical to primary - skipped)");
+    return;
+  }
+  console.log(
+    "ADVERSARY: " + adv.backendName +
+    " (type " + adv.type + ", model " + adv.model + ", dispatch " + adv.dispatch + ")"
+  );
+}
+
 function cmdResolve(args) {
   const role = args[0];
   if (!role) fail("resolve: usage: resolve <role>");
@@ -87,6 +128,7 @@ function cmdResolve(args) {
     );
     console.log("DISPATCH: native");
     console.log("Spawn the " + role + " subagent via the Task tool (config fell back to native).");
+    console.log("ADVERSARY: none");
     return;
   }
 
@@ -107,37 +149,86 @@ function cmdResolve(args) {
     );
     console.log("Relay its stdout verbatim as the " + role + "'s output.");
   }
+
+  printAdversaryLine(r, role);
 }
 
 // --- run ---
 
 function cmdRun(args) {
   const role = args[0];
-  if (!role) fail("run: usage: run <role> [-- <inputs...>]");
+  if (!role) fail("run: usage: run <role> [--adversary] [-- <inputs...>]");
 
-  // Inputs: everything after the role, dropping an optional `--` separator.
+  // Parse --adversary flag (must immediately follow the role name, before --).
   let rest = args.slice(1);
+  const adversaryMode = rest[0] === "--adversary";
+  if (adversaryMode) rest = rest.slice(1);
+
+  // Inputs: everything after the role (and optional --adversary), dropping an
+  // optional `--` separator.
   if (rest[0] === "--") rest = rest.slice(1);
   const inputs = rest.join(" ");
 
   const r = core.resolveRole(loadConfig(), role);
   if (r.error) fail(r.error);
-  if (r.dispatch === "native") {
-    fail(
-      "role '" + role + "' is native; spawn it via the Task tool, not role.js run."
-    );
+
+  // Select descriptor: adversary path or primary path.
+  let descriptor = r;
+  if (adversaryMode) {
+    // adversaryIgnored means the role is not a reviewer - the key was silently
+    // dropped; surface a useful message here rather than "no adversary".
+    if (r.adversaryIgnored) {
+      fail(
+        "adversary key on '" + role + "' is ignored (only reviewer roles" +
+        " support an adversary: " + core.REVIEWER_ROLES.join(", ") + ")."
+      );
+    }
+    if (!r.adversary) {
+      fail(
+        "no adversary configured for role '" + role + "'. Add an 'adversary'" +
+        " object to this role's entry in .gantry/models.json."
+      );
+    }
+    const adv = r.adversary;
+    if (adv.adversarySameAsPrimary) {
+      fail(
+        "adversary for '" + role + "' is identical to the primary" +
+        " (same backend and model). Skipping adversary run."
+      );
+    }
+    if (adv.dispatch === "native") {
+      fail(
+        "adversary for '" + role + "' is native; spawn it via the Task tool, not role.js run."
+      );
+    }
+    descriptor = adv;
+  } else {
+    if (r.dispatch === "native") {
+      fail(
+        "role '" + role + "' is native; spawn it via the Task tool, not role.js run."
+      );
+    }
   }
 
   const agentMd = readAgent(role);
   if (!agentMd) fail("could not read agent definition for role '" + role + "'.");
 
   const body = core.stripFrontmatter(agentMd);
-  const prompt = core.composePrompt(body, inputs);
+  // For the adversary invocation, append a one-line note that this is the
+  // adversarial final pass on an already-primary-passed diff.
+  const promptBody = adversaryMode
+    ? body + "\n\n(Adversarial final pass: the diff above has already passed " +
+      "the primary reviewer. Apply the same checklist independently.)"
+    : body;
+  const prompt = core.composePrompt(promptBody, inputs);
   const allowedTools = core.parseTools(agentMd);
 
   // Secret: read the backend's declared env var here (kept out of role-core).
+  // Use descriptor (primary or adversary) for the active backend.
   let authToken;
-  if (r.backend && r.backend.env_key) authToken = process.env[r.backend.env_key];
+  if (descriptor.backend && descriptor.backend.env_key) {
+    authToken = process.env[descriptor.backend.env_key];
+  }
 
   // Harness-safe implementer guard injection: a headless `claude -p` implementer
   // gets Gantry's two phase-enforcement guards wired in via a settings file, so
@@ -146,7 +237,7 @@ function cmdRun(args) {
   // implementer - a headless reviewer must NOT inherit the file-list guard, or
   // its _reviewed.md write would be blocked.
   let settingsPath;
-  if (role === "implementer" && r.type === "claude-headless") {
+  if (role === "implementer" && descriptor.type === "claude-headless") {
     const hooksDir = path.join(__dirname, "hooks");
     const settings = core.buildGuardSettings(
       path.join(hooksDir, "file-list-guard.js"),
@@ -168,7 +259,7 @@ function cmdRun(args) {
 
   let inv;
   try {
-    inv = core.buildInvocation(r, { prompt, allowedTools, authToken, settingsPath });
+    inv = core.buildInvocation(descriptor, { prompt, allowedTools, authToken, settingsPath });
   } catch (e) {
     fail("could not build invocation: " + e.message);
   }
@@ -243,6 +334,25 @@ function cmdShow() {
         " (" + r.type + (r.model ? ", " + r.model : "") + ")"
       );
     }
+    // Adversary line: only for reviewer roles. Non-reviewers skip quietly.
+    if (core.REVIEWER_ROLES.includes(role)) {
+      if (r.adversaryIgnored || !r.adversary) {
+        console.log("  " + " ".repeat(16) + "adversary: none");
+      } else {
+        const adv = r.adversary;
+        if (adv.adversarySameAsPrimary) {
+          console.log(
+            "  " + " ".repeat(16) + "adversary: " + adv.backendName +
+            " (" + adv.type + ", " + adv.model + ") [identical to primary - skipped]"
+          );
+        } else {
+          console.log(
+            "  " + " ".repeat(16) + "adversary: " + adv.backendName +
+            " (" + adv.type + ", " + adv.model + ", dispatch " + adv.dispatch + ")"
+          );
+        }
+      }
+    }
   }
 }
 
@@ -278,7 +388,7 @@ switch (subcommand) {
       "unknown subcommand: " + subcommand + "\n" +
       "Usage:\n" +
       "  role.js resolve <role>\n" +
-      "  role.js run <role> [-- <inputs...>]\n" +
+      "  role.js run <role> [--adversary] [-- <inputs...>]\n" +
       "  role.js detect\n" +
       "  role.js show\n" +
       "  role.js write-default"
