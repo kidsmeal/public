@@ -290,3 +290,125 @@ test("review.md cap-hit handling includes trajectory read and three options", ()
     "review.md cap-hit handling must present the 'overrule with a logged reason' option"
   );
 });
+
+// --- Phase 6: adversary final-pass in orchestrator docs + models.md schema ---
+
+test("SKILL.md describes the adversary final-pass step after the primary clean verdict", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "skills", "gantry", "SKILL.md"), "utf8"
+  );
+  assert.ok(
+    text.includes("adversary"),
+    "SKILL.md must describe the adversary final-pass step"
+  );
+  assert.ok(
+    text.includes("ADVERSARY"),
+    "SKILL.md must reference the ADVERSARY: resolve output line"
+  );
+  assert.ok(
+    text.includes("--adversary"),
+    "SKILL.md must reference the 'run --adversary' invocation"
+  );
+});
+
+test("SKILL.md adversary step covers the 'both clean' gate-open outcome", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "skills", "gantry", "SKILL.md"), "utf8"
+  );
+  assert.ok(
+    /both\s+clean|both.*clean/i.test(text),
+    "SKILL.md must state that the commit gate opens when both primary and adversary are clean"
+  );
+});
+
+test("SKILL.md adversary step covers the fail-open rule when the backend is absent", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "skills", "gantry", "SKILL.md"), "utf8"
+  );
+  // The fail-open rule: adversary backend absent / non-zero exit -> warn and proceed to gate.
+  assert.ok(
+    /fail.open|fail open|non.zero|non-zero/i.test(text),
+    "SKILL.md must describe the fail-open behavior when the adversary backend is absent or errors"
+  );
+});
+
+test("SKILL.md adversary step states that with no adversary configured nothing fires", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "skills", "gantry", "SKILL.md"), "utf8"
+  );
+  assert.ok(
+    /no adversary configured|adversary.*not configured|without.*adversary/i.test(text),
+    "SKILL.md must state that with no adversary configured the pipeline is unchanged"
+  );
+});
+
+test("review.md describes the adversary final-pass step and its outcomes", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "commands", "review.md"), "utf8"
+  );
+  assert.ok(
+    text.includes("adversary"),
+    "review.md must describe the adversary final-pass step"
+  );
+  assert.ok(
+    text.includes("--adversary"),
+    "review.md must reference the 'run --adversary' invocation"
+  );
+  assert.ok(
+    /both\s+clean|both.*clean/i.test(text),
+    "review.md must state that the commit gate opens when both primary and adversary are clean"
+  );
+});
+
+test("review.md adversary step names the fail-open behavior", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "commands", "review.md"), "utf8"
+  );
+  assert.ok(
+    /fail.open|fail open|non.zero|non-zero/i.test(text),
+    "review.md must describe the fail-open behavior when the adversary backend is absent or errors"
+  );
+});
+
+test("models.md documents the adversary object on a reviewer role", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "commands", "models.md"), "utf8"
+  );
+  assert.ok(
+    text.includes("adversary"),
+    "models.md must document the adversary config key"
+  );
+  // The opus-primary + codex-adversary example must be present.
+  assert.ok(
+    /opus|codex/i.test(text),
+    "models.md must include an example showing the adversary (e.g. opus primary + codex adversary)"
+  );
+});
+
+test("models.md states adversary is honored only on reviewer roles (ignored on implementer/planner)", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "commands", "models.md"), "utf8"
+  );
+  assert.ok(
+    /reviewer\s+role|reviewer roles/i.test(text),
+    "models.md must state adversary is honored only on reviewer roles"
+  );
+  assert.ok(
+    /ignored|ignored with a warning|warning/i.test(text),
+    "models.md must state adversary on implementer/planner is ignored with a warning"
+  );
+});
+
+test("models.md states the design-reviewer adversary is parsed and shown but dormant", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "commands", "models.md"), "utf8"
+  );
+  assert.ok(
+    /design.reviewer/i.test(text),
+    "models.md must mention the design-reviewer adversary"
+  );
+  assert.ok(
+    /dormant|v2|reserved/i.test(text),
+    "models.md must state the design-reviewer adversary is dormant (reserved for v2)"
+  );
+});

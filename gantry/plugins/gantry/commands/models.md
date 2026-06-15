@@ -17,6 +17,17 @@ The current role to backend assignments and the available external CLIs are prin
 
 **The one hard rule:** the **implementer** must use `native` or `claude-headless`. Those run inside the Claude Code harness, so the phase-enforcement hooks (file-list guard, commit guard) fire. `role.js` refuses any other implementer backend - it would void the hooks. Reviewers and the planner have no such restriction.
 
+**Adversary reviewer (optional, reviewer roles only).** A reviewer role may carry an `adversary` object shaped like a role assignment (`{ "backend": ..., "model": ... }`). When configured, the orchestrator runs the adversary once on the clean diff after the primary reviewer reaches a clean verdict, and presents both verdicts at the commit gate. Example: opus as primary reviewer, codex as adversary:
+
+```json
+"phase-reviewer": {
+  "backend": "native", "model": "opus",
+  "adversary": { "backend": "codex", "model": "gpt-5.5" }
+}
+```
+
+The `adversary` field is honored only on the two reviewer roles (`phase-reviewer`, `design-reviewer`). On `implementer` or `phase-planner` it is ignored with a warning - never an off-harness implementer by a side door. A `design-reviewer` adversary is parsed, shown by `/gantry:models`, and logged in `role.js show`, but does not fire in the orchestrator yet (reserved for v2). An adversary identical to the primary (same backend and model) is skipped with a warning at resolve time. With no `adversary` key the pipeline is byte-for-byte today's single-reviewer behavior.
+
 **If `$ARGUMENTS` names a change** (a role plus a backend, optionally a model):
 1. Ensure the config exists: run `node "${CLAUDE_PLUGIN_ROOT}/scripts/role.js" write-default` (no-op if present).
 2. Read `.gantry/models.json`, set that role's `backend` (and `model` if given). If the named backend is not defined yet, add it - ask me for the missing pieces (`cmd`/`sandbox` for a `cli`, `base_url`+`env_key` for a brain-swap `claude-headless`, `provider` for `openai-compat`) rather than guessing. Examples:

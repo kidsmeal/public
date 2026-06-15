@@ -11,6 +11,6 @@ Run the full Gantry pipeline on the resolved design (with the resolved rubric if
 Drive the stages in order, stopping only at the human gates:
 1. **Design review** (design-reviewer) - resolve any `[NEEDS USER DECISION]`, re-review if the design changed.
 2. **Plan** (phase-planner) - resolve blockers, then show me the phases and get my go-ahead.
-3. **Per phase, in order:** build (implementer) -> review (phase-reviewer) -> re-review after any fix -> stop for me to commit. Advance only after each phase is committed.
+3. **Per phase, in order:** build (implementer) -> review (phase-reviewer) -> re-review after any fix -> adversary final pass (if configured) -> stop for me to commit. Advance only after each phase is committed. The adversary final pass runs `role.js resolve phase-reviewer`, then `role.js run phase-reviewer --adversary` on the clean diff; with no adversary configured it is skipped entirely and the pipeline is unchanged. A non-zero `role.js run` exit is fail-open: warn and proceed to the commit gate (the primary already passed). Both primary and adversary must be clean before the commit gate opens, or I overrule a specific adversary finding with a logged reason.
 
 Both reviews are mandatory and you never commit for me. If no design doc is in the arguments, ask me for one - or, if I only have an idea, run the **design-plan-creator** skill first to author one, then continue. If the project isn't initialized, run `/gantry:init` first.
