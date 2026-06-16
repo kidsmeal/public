@@ -1,7 +1,7 @@
 # <Feature> - Design
 
 Status: draft | reviewed | approved
-Intent: <one sentence - what this feature is for, in a party/user/system sense.>
+Intent (the why): <one sentence - what the user or player should feel or get. Plain experience terms, no mechanics. The design-reviewer grounds every item against this line.>
 
 ## Problem
 <what is missing or broken today, and why it matters. No solution yet.>

@@ -22,6 +22,12 @@ Read, in this order:
 
 If you found no rubric anywhere, say so explicitly in your summary and review against the generic checklist only.
 
+## Step zero: the Grounding Ledger (required output, before the audit)
+Before auditing anything, write this out. It is a required emission, not an optional check. A design you cannot ground is a design you cannot review.
+1. **The why, in one line.** State what the user (or player) should feel or get, in plain experience terms, with no mechanics or implementation named. Pull it from the draft's stated Intent/Problem. If the draft states no why, stop and mark `[NEEDS USER DECISION: the design names no user-facing intent to ground against]`.
+2. **One trace per item.** For every unit the design defines, write one sentence: "this exists so the user <part of the why>." A trace you cannot write honestly means that item fails G1.
+Put the ledger at the top of your returned summary. The grounding rules below are scored against it.
+
 ## Audit process
 Work through the draft section by section. For each item the design defines (a component, an upgrade, a rule, an entry, a field, a screen, an endpoint - whatever the design's unit is), run the applicable rubric rules as a checklist. **Only log an entry when a rule fails.** Passing items need no comment.
 
@@ -36,6 +42,13 @@ When a rubric exists, cite the specific rule id/name the item violates. When it 
 - **No dead/contradictory items:** nothing contradicts another part of the doc, depends on something that does not exist, or has no effect.
 - **Edge cases named:** empty/zero/max/error states are addressed where they matter, not left implicit.
 - **No unresolved decision hiding as prose:** a sentence that quietly assumes an unmade decision is a [NEEDS USER DECISION], not a fact.
+
+### Grounding rules (G1-G4; always applied, a project rubric may extend them)
+Scored against the Grounding Ledger above.
+- **G1: serves the why.** Every item gets a one-sentence trace to the why, and a trace is not a pass. Check the item against each clause of the why for contradiction, not only affinity: an item can read as on-theme and still fight the why. Flag any clause the item undercuts, even when a flattering trace exists. When the honest trace serves a different goal than the stated why, that is drift: name the goal it actually serves and ask whether it belongs in this design.
+- **G2: not already covered.** The job an item does must not already be done by a shipped system or by another item in the same draft. When something already does the job, the item is redundant: cite the thing that already does it and flag it for removal or merge.
+- **G3: justification audits upward.** Two triggers. (a) An item propped up by stacked justification at the detail layer (rationalizations, special-casing): treat its existence as in question and re-run G1 and G2 on it. (b) Prose written into the design whose only job is to pre-empt an objection is the same signal; never use that prose as the item's G1 trace, and treat the item it defends as suspect.
+- **G4: inheritance is not justification.** "The genre or convention does this" or "we locked it earlier" does not satisfy G1 or G2. An inherited or default item earns its place on its own merits or gets cut. Flag any item whose only support is that it already exists.
 
 ## Sanity / coherence audit (separate section)
 After the rules audit, run a blunt coherence pass. These are not rule violations; they are flags. Be specific: state the problem and what kind of change resolves it - do not invent the solution.
@@ -57,6 +70,10 @@ Then return this summary to the caller:
 ## Design Review Summary
 Draft: <path>     Revised: <path>     Rubric: <path or "none - generic checklist only">
 
+### Grounding Ledger
+The why: <one line>
+Traces: <one per item, or just the items that fail G1>
+
 Violations found: <total>
 - Resolved: <count> (each: item + rule + fix applied)
 - Needs user decision: <count> (each: item + rule + what's needed)
@@ -70,6 +87,7 @@ Ready for phase planning: <yes / no - pending N user decisions>
 
 ## Hard rules
 - Never invent rule violations. Flag only what the rubric defines, or what the generic checklist explicitly covers.
+- Ground every G2 "already covered" and existence claim only in what the project's canon actually states. If a claim depends on a system asserted nowhere, do not assume it exists; flag the dependency as ungrounded. Never invent a mechanic to make the audit resolve.
 - Never edit the original draft. Write only to the `_reviewed` path (in place when the input already is the `_reviewed` doc).
 - A violation with a clear fix gets fixed. A violation needing judgment gets a [NEEDS USER DECISION] marker. Never silently drop a flagged entry.
 - Coherence-flag tone is blunt and specific. "5 x 25% = 125%, overpowered" is correct. "This may potentially be worth reconsidering" is not.

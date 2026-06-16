@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "gantry",
   "displayName": "Gantry",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "A gated design -> plan -> build -> review pipeline for Claude Code. An interactive design author and four disciplined subagents turn a feature idea into reviewed, phased implementation that advances one gated step at a time, driven end to end by one orchestrator skill with both review gates. Two living docs (a currentness audit and a runtime verification queue) keep the project honest about what is real. Reads each project's own conventions, so it works in any stack.",
   "author": {
     "name": "kidsmeal",
