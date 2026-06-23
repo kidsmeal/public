@@ -24,7 +24,7 @@ One item is a phase-internal caution, not a top-level blocker (it cannot be deci
 - The round cap lives as prose in `SKILL.md` Stage 3 step 4 ("capped at 2 fix-and-re-review cycles") and `review.md` ("Repeat up to 2 cycles"). U3 keeps the number and only adds the trajectory read + three options to the existing stop. The grill's "N=3" is explicitly dropped by the design; do not change the number.
 
 ## Phase 1: Reviewer hardening - reachability, real-input, scope calibration (v1)
-**Status:** pending
+**Status:** done
 **Goal:** Add the three new reviewer behaviors (U1 reachability, U2 real-input verification, U3 scope-calibrated FAILs) to the phase-reviewer contract, including the Hard-rule exception that lets it run the U2 real-input smoke.
 **Files:**
 - modify `plugins/gantry/agents/phase-reviewer.md`
@@ -35,7 +35,7 @@ One item is a phase-internal caution, not a top-level blocker (it cannot be deci
 **Wired-by:** none (the phase-reviewer contract is the live consumer - the reviewer reads this file every run; no separate caller wires a prompt edit).
 
 ## Phase 2: Planner wiring declaration + implementer real-input rule (v1)
-**Status:** pending
+**Status:** done
 **Goal:** Add the planner's per-phase wiring declaration (U1) and the implementer's real-input verification rule (U2) to their contracts, so the plan owns wiring (the root cause of finding 1) and the build exercises real artifacts.
 **Files:**
 - modify `plugins/gantry/agents/phase-planner.md`
@@ -47,7 +47,7 @@ One item is a phase-internal caution, not a top-level blocker (it cannot be deci
 **Wired-by:** none (both edited files are read directly by their respective agents at run time; a prompt edit needs no separate caller).
 
 ## Phase 3: Orchestrator informed-escalation round cap (v1, closes the v1 block)
-**Status:** pending
+**Status:** done
 **Goal:** Make the existing 2-cycle stop in the orchestrator an informed escalation (trajectory read + the three options), keeping the cap value and unit unchanged, so a stuck loop pulls in the human with enough context to choose - and never auto-passes.
 **Files:**
 - modify `plugins/gantry/skills/gantry/SKILL.md`
@@ -59,7 +59,7 @@ One item is a phase-internal caution, not a top-level blocker (it cannot be deci
 **Wired-by:** none (SKILL.md / review.md are the orchestrator's own control-flow prose, read at run time by the orchestrating session; no separate caller).
 
 ## Phase 4: Adversary resolution in role-core.js (v1.5)
-**Status:** pending
+**Status:** done
 **Goal:** Add the additive resolved `adversary` descriptor to `role-core.js`'s `resolveRole` return, resolving an `adversary` on a reviewer role through the same path as the primary, fail-safe to "no adversary" on any malformed entry, with the implementer harness lock never applying to a reviewer's adversary.
 **Files:**
 - modify `plugins/gantry/scripts/role-core.js`
@@ -70,7 +70,7 @@ One item is a phase-internal caution, not a top-level blocker (it cannot be deci
 **Wires:** `plugins/gantry/scripts/role.js`'s `resolve`/`show`/`run --adversary` (Phase 5) consume this new descriptor - that is the live caller, added in the next phase. (`Wired-by: phase 5`.)
 
 ## Phase 5: Adversary dispatch surfaces in role.js (resolve / run --adversary / show) (v1.5)
-**Status:** pending
+**Status:** done
 **Goal:** Surface the resolved adversary through `role.js`: an `ADVERSARY:` line on `resolve`, a `run <role> --adversary` invocation that runs the adversary backend on the same agent body plus the final-pass note, and an adversary line per reviewer role on `show`.
 **Files:**
 - modify `plugins/gantry/scripts/role.js`
@@ -81,7 +81,7 @@ One item is a phase-internal caution, not a top-level blocker (it cannot be deci
 **Wired-by:** phase 6 (the orchestrator's adversary final-pass step consumes the `resolve` `ADVERSARY:` line and calls `run --adversary`); the `show` line is consumed by `/gantry:models` (`models.md`, updated in Phase 6).
 
 ## Phase 6: Orchestrator adversary final-pass + models.json schema doc (v1.5)
-**Status:** pending
+**Status:** done
 **Goal:** Wire the configured `phase-reviewer` adversary into the orchestrator loop as a final pass on the clean diff under its own round cap, fail-open when the adversary backend is absent, and document the additive `adversary` schema in `models.md`.
 **Files:**
 - modify `plugins/gantry/skills/gantry/SKILL.md`
