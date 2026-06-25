@@ -1,5 +1,7 @@
 # Compass Rose ecosystem: feature plan
 
+> **Sunset note (2026-06-24).** Compass Rose and Codebase Cartographer are removed. The cartobench A/B (see `TOOL_VALIDATION_FINDINGS.md`) killed cartographer's agent-navigation premise: the agent opened the generated docs 0 times in 48 runs. With one leg gone the connector had no job left. Kept: Gantry and ClauDHD, the two tools actually reached for while building. The compass-targeted items below (F1, F3, F5, F6, F7) are dead. F2 (gantry) and F4 (claudhd) stand. F8 reopens rather than ships: it retired ClauDHD's roadmap because compass owned that axis, and compass no longer does. The one salvage from cartographer, a coarse architecture-and-gotchas note the planner reads, now lives in `/gantry:init`. The rest of this doc is kept as the historical record of what the suite was before the cut.
+
 Handoff doc for an implementing agent. Produced 2026-06-10, follows FIXES.md (the bug/drift batch). These are new features, reviewed against both project roadmaps so nothing here duplicates existing backlog. Design decisions are already made and written into each item; a few are flagged as veto points for the human. If the code contradicts a premise here, stop and flag rather than improvise.
 
 ## Prerequisites

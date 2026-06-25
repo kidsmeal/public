@@ -53,7 +53,7 @@ If either is missing, stop and ask.
 
    **Docs impact** (note-only — never a fail)
    - From `git status` / `git diff`, identify what this phase moved, renamed, deleted, or added.
-   - For moved/renamed/deleted paths: grep the project's standing docs — `docs/INDEX.md`, `docs/GLOSSARY.md`, `docs/CONVENTIONS.md`, `docs/map/*`, and the CLAUDE.md "Where things are" block — for the old path or name. Any hit is a standing doc this phase just made stale. (If the cartographer plugin or `/compass:doctor` is available, its `verify.js` catches broken path/anchor references mechanically — prefer it.)
+   - For moved/renamed/deleted paths: grep whichever of the project's standing docs exist — `docs/INDEX.md`, `docs/ARCHITECTURE.md`, `docs/GLOSSARY.md`, `docs/CONVENTIONS.md`, and the CLAUDE.md "Where things are" block — for the old path or name. Any hit is a standing doc this phase just made stale. If the project keeps none of these, this check is a no-op.
    - For a significant new module, entry point, or subsystem the diff adds: check whether the codebase map mentions it. A real new unit absent from the map is a gap.
    - List each affected doc and tag it **mechanical** (still references a path or name this diff moved/renamed/deleted - fixable with a plain text edit, no judgment) or **judgment** (needs a real call: a new module to describe in the map, a semantic claim the diff changed). The relay fixes mechanical ones immediately and logs judgment ones to the audit ledger - you only classify, you do not edit.
 

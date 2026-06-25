@@ -5,24 +5,12 @@
     "name": "kidsmeal",
     "url": "https://github.com/kidsmeal"
   },
-  "description": "kidsmeal's Claude Code plugins: Gantry, Codebase Cartographer, Compass Rose, and ClauDHD. Add this marketplace once and install any of them.",
+  "description": "kidsmeal's Claude Code plugins: Gantry and ClauDHD. Add this marketplace once and install either of them.",
   "plugins": [
     {
       "name": "gantry",
       "source": "./gantry/plugins/gantry",
       "description": "Gantry: a gated design -> plan -> build -> review pipeline with PreToolUse enforcement hooks (a file-list guard and a commit guard) and two living audit docs. Reads each project's own conventions; works in any stack.",
-      "author": { "name": "kidsmeal" }
-    },
-    {
-      "name": "cartographer",
-      "source": "./cartographer/plugins/cartographer",
-      "description": "Codebase Cartographer: documents a codebase (INDEX map, CLAUDE.md \"Where things are\" block, GLOSSARY, ROADMAP, CONVENTIONS). Also published standalone in the cartographer marketplace.",
-      "author": { "name": "kidsmeal" }
-    },
-    {
-      "name": "compass",
-      "source": "./compass-rose/plugins/compass",
-      "description": "Compass Rose: the connective layer over Cartographer, ClauDHD, and Gantry - map-grounded design, a roadmap that is the hub, a two-lane triage, and a unified session brief. Declares the other three as dependencies.",
       "author": { "name": "kidsmeal" }
     },
     {

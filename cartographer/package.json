@@ -1,8 +1,0 @@
-{
-  "name": "cartographer-dev",
-  "private": true,
-  "description": "Dev tooling (tests) for the Codebase Cartographer plugin. Not published; the plugin itself lives in plugins/cartographer and has zero runtime dependencies.",
-  "scripts": {
-    "test": "node --test"
-  }
-}
