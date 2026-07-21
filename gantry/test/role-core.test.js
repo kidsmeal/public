@@ -10,6 +10,35 @@ const CORE = path.join(
 );
 const core = require(CORE);
 
+// --- scaffoldConfig: what init writes into a fresh project ---
+
+test("scaffoldConfig routes both reviewers to codex when codex is available", () => {
+  const config = core.scaffoldConfig(true);
+  for (const role of core.REVIEWER_ROLES) {
+    assert.deepEqual(config.roles[role], core.CODEX_REVIEWER, role);
+  }
+  assert.equal(config.roles["implementer"].backend, "native");
+  assert.equal(config.roles["phase-planner"].backend, "native");
+});
+
+test("scaffoldConfig stays all-native when codex is not available", () => {
+  assert.deepEqual(core.scaffoldConfig(false).roles, core.DEFAULT_CONFIG.roles);
+});
+
+test("scaffoldConfig does not mutate DEFAULT_CONFIG", () => {
+  core.scaffoldConfig(true);
+  for (const role of core.REVIEWER_ROLES) {
+    assert.equal(core.DEFAULT_CONFIG.roles[role].backend, "native", role);
+  }
+});
+
+test("scaffoldConfig output resolves as a valid routing for every role", () => {
+  const text = JSON.stringify(core.scaffoldConfig(true));
+  for (const role of core.VALID_ROLES) {
+    assert.equal(core.resolveRole(core.parseConfig(text), role).error, null, role);
+  }
+});
+
 // --- parseConfig: fail SAFE to the native default ---
 
 test("parseConfig returns DEFAULT_CONFIG for empty/null input", () => {

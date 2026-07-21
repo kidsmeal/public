@@ -51,8 +51,13 @@ const REVIEWER_ROLES = ["design-reviewer", "phase-reviewer"];
 // fail-safe to native), never an external dispatch that throws later at run.
 const KNOWN_BACKEND_TYPES = ["native", "claude-headless", "cli", "openai-compat"];
 
-// The shipped default: every role native, behaviour unchanged until a project
-// flips a role to an external backend. Only verified backends are shipped here
+// The shipped fallback: every role native, behaviour unchanged until a project
+// flips a role to an external backend. This is the value parseConfig degrades to
+// when models.json is absent or unreadable, so it must never depend on an
+// external CLI being installed (invariant #1). The config init SCAFFOLDS is a
+// different thing - see scaffoldConfig below, which prefers codex for the phase
+// reviewer when the codex CLI is actually present. Only verified backends are
+// shipped here
 // (native, headless claude, codex). gemini / openai-compat / brain-swap claude
 // backends are documented in /gantry:models for users to add as config rows.
 const DEFAULT_CONFIG = {
@@ -80,6 +85,26 @@ const DEFAULT_CONFIG = {
     },
   },
 };
+
+// Both gates read work a Claude role just produced - the design doc and the
+// diff - so both are where a second model earns its cost. This is the default
+// routing init writes for a new project, but only when the codex CLI is on
+// PATH, since scaffolding a gate that cannot run is worse than no gate.
+const CODEX_REVIEWER = { backend: "codex", model: "gpt-5.5" };
+
+// Build the config to scaffold into a fresh project. `codexAvailable` comes from
+// a PATH probe at the call site (init.js), never from a guess here. Returns a
+// deep-enough copy so callers cannot mutate DEFAULT_CONFIG through it.
+function scaffoldConfig(codexAvailable) {
+  const config = {
+    roles: { ...DEFAULT_CONFIG.roles },
+    backends: { ...DEFAULT_CONFIG.backends },
+  };
+  if (codexAvailable) {
+    for (const role of REVIEWER_ROLES) config.roles[role] = { ...CODEX_REVIEWER };
+  }
+  return config;
+}
 
 // Parse models.json text into a config object, falling back to DEFAULT_CONFIG on
 // any error (absent file, malformed JSON, wrong shape). Never throws. This is
@@ -421,6 +446,8 @@ module.exports = {
   VALID_ROLES,
   REVIEWER_ROLES,
   DEFAULT_CONFIG,
+  CODEX_REVIEWER,
+  scaffoldConfig,
   parseConfig,
   resolveRole,
   expandCmd,

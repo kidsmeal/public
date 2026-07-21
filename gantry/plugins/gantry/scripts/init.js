@@ -55,9 +55,25 @@ for (const name of ["CURRENTNESS_AUDIT.md", "RUNTIME_VERIFICATION_QUEUE.md"]) {
   }
 }
 
-// Scaffold the model-backend config (.gantry/models.json). All roles default to
-// the native in-session subagent, so the pipeline behaves exactly as before
-// until a role is flipped to an external backend via /gantry:models. This is
+// Which external agent CLIs are available, so the command can tailor its
+// model-backend guidance - and so the scaffold below knows whether the codex
+// phase reviewer it wants to write can actually run. Best-effort; absent CLIs
+// report [missing] quickly.
+function onPath(cmd) {
+  try {
+    const r = spawnSync(cmd + " --version", { stdio: "ignore", shell: true, timeout: 8000 });
+    return !r.error && r.status === 0;
+  } catch { return false; }
+}
+const codexAvailable = onPath("codex");
+const cliStatus = [["codex", codexAvailable], ["claude", onPath("claude")], ["gemini", onPath("gemini")]]
+  .map(([c, found]) => c + (found ? " [found]" : " [missing]"));
+
+// Scaffold the model-backend config (.gantry/models.json). Both reviewers route
+// to codex when the codex CLI is on PATH - the two gates are worth a second
+// model's eyes - and fall back to native when it is not, since a gate that
+// cannot run is worse than no gate. Every other role is native, so the pipeline
+// behaves exactly as before until flipped via /gantry:models. This is
 // per-machine config (its backends depend on which CLIs and API keys exist
 // locally), so it is gitignored below rather than shared. Never overwrites an
 // existing file.
@@ -69,9 +85,11 @@ if (exists(path.join(".gantry", "models.json"))) {
     fs.mkdirSync(path.join(ROOT, ".gantry"), { recursive: true });
     fs.writeFileSync(
       path.join(ROOT, ".gantry", "models.json"),
-      JSON.stringify(roleCore.DEFAULT_CONFIG, null, 2) + "\n"
+      JSON.stringify(roleCore.scaffoldConfig(codexAvailable), null, 2) + "\n"
     );
-    modelsStatus = "created .gantry/models.json (all roles native)";
+    modelsStatus = codexAvailable
+      ? "created .gantry/models.json (both reviewers -> codex, rest native)"
+      : "created .gantry/models.json (all roles native - codex CLI not on PATH)";
   } catch (e) {
     modelsStatus = "could not write .gantry/models.json (" + e.message + ")";
   }
@@ -117,17 +135,6 @@ const GITIGNORE_ENTRIES = [
     console.error("! Gantry: could not update .gitignore: " + e.message);
   }
 }
-
-// Which external agent CLIs are available, so the command can tailor its
-// model-backend guidance. Best-effort; absent CLIs report [missing] quickly.
-function onPath(cmd) {
-  try {
-    const r = spawnSync(cmd + " --version", { stdio: "ignore", shell: true, timeout: 8000 });
-    return !r.error && r.status === 0;
-  } catch { return false; }
-}
-const cliStatus = ["codex", "claude", "gemini"]
-  .map((c) => c + (onPath(c) ? " [found]" : " [missing]"));
 
 // Convention / style files the agents should read for THIS project.
 const CONVENTION_CANDIDATES = [
@@ -235,7 +242,8 @@ console.log("\n--- Model backends ---");
 console.log("Config: " + modelsStatus);
 console.log("External agent CLIs: " + cliStatus.join("  "));
 console.log(
-  "Roles default to native (in-session Claude subagent). Use /gantry:models to\n" +
-  "route reviewers/planner to an external model (e.g. codex). The implementer is\n" +
-  "pinned to the Claude Code harness so the enforcement hooks always fire."
+  "Both reviewers route to codex when the codex CLI is installed, so the design\n" +
+  "doc and the diff each get a second model's read; every other role is native\n" +
+  "(in-session Claude subagent). Use /gantry:models to change any of it. The\n" +
+  "implementer is pinned to the Claude Code harness so the hooks always fire."
 );
