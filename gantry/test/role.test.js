@@ -357,3 +357,58 @@ test("run --adversary: dispatches to the adversary backend, not the primary", ()
       "primary (node --version) output must not appear in stdout");
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+// A stdin-echo backend: pipes stdin straight to stdout so the composed prompt
+// appears in the process stdout. Used to assert prompt note wording.
+const ECHO_BACKEND = {
+  type: "cli",
+  cmd: "node -e \"process.stdin.pipe(process.stdout)\"",
+  promptVia: "stdin",
+};
+
+test("run --adversary: phase-reviewer adversary prompt carries diff wording", () => {
+  // The phase-reviewer adversary note must mention "diff" (unchanged behavior).
+  const dir = mk();
+  try {
+    writeConfig(dir, {
+      roles: {
+        "phase-reviewer": {
+          backend: "native",
+          model: "opus",
+          adversary: { backend: "echo", model: "any" },
+        },
+      },
+      backends: { native: { type: "native" }, echo: ECHO_BACKEND },
+    });
+    const r = runAdversary(dir, "phase-reviewer", []);
+    assert.equal(r.status, 0, "echo adversary exited non-zero: " + r.stderr);
+    assert.match(r.stdout, /diff/i,
+      "phase-reviewer adversary prompt must contain 'diff'");
+    assert.doesNotMatch(r.stdout, /design doc/i,
+      "phase-reviewer adversary prompt must not contain 'design doc'");
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("run --adversary: design-reviewer adversary prompt carries design-doc wording, not diff", () => {
+  // The design-reviewer adversary note must not say "diff"; it must reference
+  // the design doc and the primary design review.
+  const dir = mk();
+  try {
+    writeConfig(dir, {
+      roles: {
+        "design-reviewer": {
+          backend: "native",
+          model: "opus",
+          adversary: { backend: "echo", model: "any" },
+        },
+      },
+      backends: { native: { type: "native" }, echo: ECHO_BACKEND },
+    });
+    const r = runAdversary(dir, "design-reviewer", []);
+    assert.equal(r.status, 0, "echo adversary exited non-zero: " + r.stderr);
+    assert.match(r.stdout, /design doc/i,
+      "design-reviewer adversary prompt must contain 'design doc'");
+    assert.doesNotMatch(r.stdout, /the diff above/i,
+      "design-reviewer adversary prompt must not contain 'the diff above'");
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});

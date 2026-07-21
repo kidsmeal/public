@@ -24,7 +24,8 @@
  *       relay. Errors for a native role (those are Task-spawned, not run here).
  *       With --adversary, runs the role's configured adversary backend instead
  *       of the primary, using the same agent .md body plus a one-line note that
- *       it is the adversarial final pass on an already-primary-passed diff.
+ *       it is the adversarial final pass on an already-primary-passed artifact
+ *       (a diff for phase-reviewer, a design doc for design-reviewer).
  *       A native adversary is refused (use the Task tool for native roles). An
  *       adversary identical to the primary is refused (warn and exit non-zero).
  *
@@ -215,11 +216,18 @@ function cmdRun(args) {
 
   const body = core.stripFrontmatter(agentMd);
   // For the adversary invocation, append a one-line note that this is the
-  // adversarial final pass on an already-primary-passed diff.
-  const promptBody = adversaryMode
-    ? body + "\n\n(Adversarial final pass: the diff above has already passed " +
-      "the primary reviewer. Apply the same checklist independently.)"
-    : body;
+  // adversarial final pass on an already-primary-passed artifact. The wording
+  // is role-appropriate: design-reviewer references the design doc; all other
+  // reviewer roles (phase-reviewer) reference the diff.
+  let promptBody = body;
+  if (adversaryMode) {
+    const advNote = role === "design-reviewer"
+      ? "(Adversarial final pass: the design doc above has already passed " +
+        "the primary design review. Apply the same checklist independently.)"
+      : "(Adversarial final pass: the diff above has already passed " +
+        "the primary reviewer. Apply the same checklist independently.)";
+    promptBody = body + "\n\n" + advNote;
+  }
   const prompt = core.composePrompt(promptBody, inputs);
   const allowedTools = core.parseTools(agentMd);
 
