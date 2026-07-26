@@ -2,3 +2,4 @@
 .gantry/active-phase.json
 .gantry/models.json
 .gantry/headless-implementer-settings.json
+.claude/settings.local.json
