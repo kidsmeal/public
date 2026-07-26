@@ -93,15 +93,28 @@ const DEFAULT_CONFIG = {
 const CODEX_REVIEWER = { backend: "codex", model: "gpt-5.5" };
 
 // Build the config to scaffold into a fresh project. `codexAvailable` comes from
-// a PATH probe at the call site (init.js), never from a guess here. Returns a
-// deep-enough copy so callers cannot mutate DEFAULT_CONFIG through it.
-function scaffoldConfig(codexAvailable) {
+// a probe at the call site (init.js), never from a guess here. `codexBin`
+// (optional) is the full path of the codex binary that actually passed that
+// probe, for when the bare `codex` on PATH is a stale shim that cannot start;
+// it replaces the leading `codex` token of the backend cmd so the scaffolded
+// reviewers invoke the binary that works. buildInvocation tokenizes the cmd
+// template on whitespace, so a whitespace-containing path cannot be
+// represented; such an override is ignored (default cmd kept) rather than
+// scaffolded broken. Returns a deep-enough copy so callers cannot mutate
+// DEFAULT_CONFIG through it.
+function scaffoldConfig(codexAvailable, codexBin) {
   const config = {
     roles: { ...DEFAULT_CONFIG.roles },
     backends: { ...DEFAULT_CONFIG.backends },
   };
   if (codexAvailable) {
     for (const role of REVIEWER_ROLES) config.roles[role] = { ...CODEX_REVIEWER };
+    if (codexBin && !/\s/.test(codexBin)) {
+      config.backends.codex = {
+        ...DEFAULT_CONFIG.backends.codex,
+        cmd: DEFAULT_CONFIG.backends.codex.cmd.replace(/^codex(?=\s)/, () => codexBin),
+      };
+    }
   }
   return config;
 }

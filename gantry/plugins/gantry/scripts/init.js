@@ -65,16 +65,97 @@ function onPath(cmd) {
     return !r.error && r.status === 0;
   } catch { return false; }
 }
-const codexAvailable = onPath("codex");
-const cliStatus = [["codex", codexAvailable], ["claude", onPath("claude")], ["gemini", onPath("gemini")]]
-  .map(([c, found]) => c + (found ? " [found]" : " [missing]"));
+
+// For codex, `--version` alone is not proof it can run: a stale shim on PATH
+// prints its version fine yet dies at startup when the shared
+// ~/.codex/config.toml uses a newer schema than the shim understands (the
+// app keeps its real, current binary in a versioned subdirectory of the same
+// bin dir). `codex login status` forces a config load, so exit 0 means this
+// binary can actually start. Called with no argument it probes the PATH
+// `codex` (via shell, like onPath); with a full path it probes that binary.
+function codexConfigLoads(bin) {
+  try {
+    const r = bin
+      ? spawnSync(bin, ["login", "status"], { stdio: "ignore", timeout: 8000 })
+      : spawnSync("codex login status", { stdio: "ignore", shell: true, timeout: 8000 });
+    return !r.error && r.status === 0;
+  } catch { return false; }
+}
+
+// Resolve which file `codex` on PATH actually is, so the probe can look for
+// versioned sibling installs next to it.
+function whichCodex() {
+  try {
+    const r = process.platform === "win32"
+      ? spawnSync("where", ["codex"], { encoding: "utf8", timeout: 8000 })
+      : spawnSync("command -v codex", { encoding: "utf8", shell: true, timeout: 8000 });
+    if (r.error || r.status !== 0) return null;
+    return (r.stdout || "").split(/\r?\n/).map((l) => l.trim()).filter(Boolean)[0] || null;
+  } catch { return null; }
+}
+
+// When the PATH codex cannot load the config, the install that CAN is usually
+// sitting right next to it: the codex app keeps versioned installs in
+// hash-named subdirectories of the same bin directory its PATH shim lives in.
+// Return the full path of the first sibling codex that passes the config-load
+// probe, or null.
+function findWorkingCodexSibling(pathBin) {
+  const binDir = path.dirname(pathBin);
+  const exe = process.platform === "win32" ? "codex.exe" : "codex";
+  let entries;
+  try { entries = fs.readdirSync(binDir, { withFileTypes: true }); } catch { return null; }
+  for (const ent of entries) {
+    if (!ent.isDirectory()) continue;
+    const candidate = path.join(binDir, ent.name, exe);
+    if (!fs.existsSync(candidate)) continue;
+    if (codexConfigLoads(candidate)) return candidate;
+  }
+  return null;
+}
+
+// The full codex probe. `codexBin` is null when the plain PATH `codex` works
+// (or nothing works); it carries the sibling's full path when only the sibling
+// works, and scaffoldConfig then writes that path into the backend cmd. A
+// sibling path containing whitespace cannot be represented in the cmd template
+// (it tokenizes on whitespace), so it counts as not found rather than being
+// scaffolded broken.
+function probeCodex() {
+  if (!onPath("codex")) {
+    return { available: false, codexBin: null, reason: "codex CLI not on PATH", status: "codex [missing]" };
+  }
+  if (codexConfigLoads()) {
+    return { available: true, codexBin: null, reason: null, status: "codex [found]" };
+  }
+  const pathBin = whichCodex();
+  const sibling = pathBin ? findWorkingCodexSibling(pathBin) : null;
+  if (sibling && !/\s/.test(sibling)) {
+    return {
+      available: true,
+      codexBin: sibling,
+      reason: null,
+      status: "codex [found - PATH binary cannot load ~/.codex/config.toml; using " + sibling + "]",
+    };
+  }
+  return {
+    available: false,
+    codexBin: null,
+    reason: "codex on PATH but it cannot load ~/.codex/config.toml and no working sibling install was found",
+    status: "codex [broken - cannot load ~/.codex/config.toml]",
+  };
+}
+
+const codex = probeCodex();
+const cliStatus = [codex.status].concat(
+  [["claude", onPath("claude")], ["gemini", onPath("gemini")]]
+    .map(([c, found]) => c + (found ? " [found]" : " [missing]"))
+);
 
 // Scaffold the model-backend config (.gantry/models.json). Both reviewers route
-// to codex when the codex CLI is on PATH - the two gates are worth a second
-// model's eyes - and fall back to native when it is not, since a gate that
-// cannot run is worse than no gate. Every other role is native, so the pipeline
-// behaves exactly as before until flipped via /gantry:models. This is
-// per-machine config (its backends depend on which CLIs and API keys exist
+// to codex when a codex that can actually START is found - the two gates are
+// worth a second model's eyes - and fall back to native when it is not, since a
+// gate that cannot run is worse than no gate. Every other role is native, so
+// the pipeline behaves exactly as before until flipped via /gantry:models. This
+// is per-machine config (its backends depend on which CLIs and API keys exist
 // locally), so it is gitignored below rather than shared. Never overwrites an
 // existing file.
 let modelsStatus;
@@ -85,11 +166,12 @@ if (exists(path.join(".gantry", "models.json"))) {
     fs.mkdirSync(path.join(ROOT, ".gantry"), { recursive: true });
     fs.writeFileSync(
       path.join(ROOT, ".gantry", "models.json"),
-      JSON.stringify(roleCore.scaffoldConfig(codexAvailable), null, 2) + "\n"
+      JSON.stringify(roleCore.scaffoldConfig(codex.available, codex.codexBin), null, 2) + "\n"
     );
-    modelsStatus = codexAvailable
-      ? "created .gantry/models.json (both reviewers -> codex, rest native)"
-      : "created .gantry/models.json (all roles native - codex CLI not on PATH)";
+    modelsStatus = codex.available
+      ? "created .gantry/models.json (both reviewers -> codex" +
+        (codex.codexBin ? " via " + codex.codexBin : "") + ", rest native)"
+      : "created .gantry/models.json (all roles native - " + codex.reason + ")";
   } catch (e) {
     modelsStatus = "could not write .gantry/models.json (" + e.message + ")";
   }

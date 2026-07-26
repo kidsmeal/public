@@ -39,6 +39,57 @@ test("scaffoldConfig output resolves as a valid routing for every role", () => {
   }
 });
 
+// --- scaffoldConfig: the codexBin override (stale PATH shim, working sibling) ---
+
+test("scaffoldConfig with codexBin rewrites the codex backend cmd to the full path", () => {
+  const bin = "C:\\Users\\u\\AppData\\Local\\OpenAI\\Codex\\bin\\69066b736e1e17a4\\codex.exe";
+  const config = core.scaffoldConfig(true, bin);
+  const codex = config.backends.codex;
+  assert.ok(codex.cmd.startsWith(bin + " "), "cmd should start with the full path: " + codex.cmd);
+  assert.match(codex.cmd, /exec --model \{model\} --sandbox \{sandbox\} --skip-git-repo-check$/);
+  // The rest of the backend definition survives the override.
+  assert.equal(codex.promptVia, "stdin");
+  assert.equal(codex.sandbox, "workspace-write");
+});
+
+test("scaffoldConfig codexBin override does not mutate DEFAULT_CONFIG's codex backend", () => {
+  core.scaffoldConfig(true, "/opt/openai/codex/bin/abc123/codex");
+  assert.equal(
+    core.DEFAULT_CONFIG.backends.codex.cmd,
+    "codex exec --model {model} --sandbox {sandbox} --skip-git-repo-check"
+  );
+});
+
+test("scaffoldConfig ignores a codexBin containing whitespace (cmd tokenizes on whitespace)", () => {
+  const config = core.scaffoldConfig(true, "C:\\Program Files\\Codex\\codex.exe");
+  assert.equal(config.backends.codex.cmd, core.DEFAULT_CONFIG.backends.codex.cmd);
+});
+
+test("scaffoldConfig ignores codexBin when codex is not available", () => {
+  const config = core.scaffoldConfig(false, "/opt/openai/codex/bin/abc123/codex");
+  assert.deepEqual(config.roles, core.DEFAULT_CONFIG.roles);
+  assert.equal(config.backends.codex.cmd, core.DEFAULT_CONFIG.backends.codex.cmd);
+});
+
+test("scaffoldConfig with codexBin yields reviewers whose invocation argv[0] is the full path", () => {
+  const bin = "/opt/openai/codex/bin/abc123/codex";
+  const config = core.parseConfig(JSON.stringify(core.scaffoldConfig(true, bin)));
+  for (const role of core.REVIEWER_ROLES) {
+    const r = core.resolveRole(config, role);
+    assert.equal(r.error, null, role);
+    const inv = core.buildInvocation(r, { prompt: "REVIEW" });
+    assert.equal(inv.argv[0], bin, role);
+    assert.deepEqual(inv.argv.slice(1, 4), ["exec", "--model", "gpt-5.5"], role);
+  }
+});
+
+test("scaffoldConfig with a Windows codexBin round-trips through JSON with backslashes intact", () => {
+  const bin = "C:\\Users\\u\\AppData\\Local\\OpenAI\\Codex\\bin\\69066b736e1e17a4\\codex.exe";
+  const config = core.parseConfig(JSON.stringify(core.scaffoldConfig(true, bin)));
+  const inv = core.buildInvocation(core.resolveRole(config, "phase-reviewer"), { prompt: "R" });
+  assert.equal(inv.argv[0], bin);
+});
+
 // --- parseConfig: fail SAFE to the native default ---
 
 test("parseConfig returns DEFAULT_CONFIG for empty/null input", () => {
