@@ -376,3 +376,45 @@ test("add-files: no-op (no throw, exit 0) when sentinel is absent", () => {
     assert.ok(!sentinelExists(dir), "no sentinel should be created");
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+// Regression for the multi-file-per-bullet bug (found live by a codex phase
+// review running a real plan): a bullet like "- modify `a.js`, `b.js`, `c.js`"
+// must contribute all three files, not just the first, while backtick-quoted
+// identifiers in a trailing description must NOT be swept in.
+const MULTI_FILE_PLAN = `# Multi Plan
+Source design: docs/design.md
+Conventions read: none
+Verification command(s): node --test
+
+## Summary
+Fixture plan with multi-file bullets.
+
+## Phase 2: multi-file phase
+**Goal:** Test multi-file Files bullets.
+**Files:**
+- modify \`a.js\`, \`b.js\`, \`c.js\` (three files, one bullet)
+- modify \`d.js\` (\`SOME_CONST = 1\`; add \`helperFn\` and \`otherThing\` - description text, not file paths)
+- create \`e.js\`, \`f.js\`
+**Verification:** node --test
+**Exit criteria:** tests pass.
+**Blockers:** None.
+
+## Cross-cutting concerns
+None.
+`;
+
+test("write: a bullet with multiple comma-separated backtick paths contributes every path", () => {
+  const dir = mk();
+  try {
+    const planPath = path.join(dir, "plan.md");
+    fs.writeFileSync(planPath, MULTI_FILE_PLAN);
+    const r = run(dir, ["write", planPath, "2"]);
+    assert.equal(r.status, 0, "write should exit 0\nstdout: " + r.stdout + "\nstderr: " + r.stderr);
+    const s = readSentinel(dir);
+    assert.deepEqual(
+      s.files,
+      ["a.js", "b.js", "c.js", "d.js", "e.js", "f.js"],
+      "every backtick-quoted path across all bullets must be captured, in order"
+    );
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});

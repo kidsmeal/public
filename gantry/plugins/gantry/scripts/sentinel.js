@@ -50,15 +50,42 @@ const SENTINEL_PATH = path.join(ROOT, ".gantry", "active-phase.json");
 //     **Files:**
 //     - create `path/to/file.js` (optional description)
 //     - modify `path/to/other.js`: optional description
+//     - modify `path/one.js`, `path/two.js` (both changed together)
 //
-// In both cases the first backtick-quoted token on each relevant line is a
-// file path. The inline form is extracted from the **Files:** line itself;
-// the bullet form is extracted from subsequent `- ` lines until the next
-// bold heading (**...) or ## heading.
+// The inline form is extracted from the **Files:** line itself. Each bullet
+// contributes its LEADING run of comma-separated backtick-quoted paths (see
+// extractLeadingBacktickRun), so a multi-file bullet contributes every file
+// it names, while backtick-quoted identifiers in a trailing description
+// (constants, function names, section names) are not swept in. Capturing
+// only the first token per bullet silently underscoped every multi-file
+// phase - found live by a codex phase review running the real plan.
 //
 // Returns an empty array if the phase or Files section is not found.
 // Callers MUST treat an empty return as a fatal error (fail-open; do not
 // write a sentinel with an empty scope).
+
+// The leading run of comma-separated backtick-quoted tokens on a bullet
+// line: `a`, `b`, `c` (description...) yields [a, b, c] and stops at the
+// first gap between tokens that is not exactly a comma separator, so a
+// trailing description's own backtick-quoted identifiers ("- modify `x.js`
+// (`SOME_CONST`; add `helper`)" must yield only `x.js`).
+function extractLeadingBacktickRun(line) {
+  const tokens = [];
+  const re = /`([^`]+)`/g;
+  let m;
+  while ((m = re.exec(line)) !== null) {
+    tokens.push({ text: m[1], start: m.index, end: m.index + m[0].length });
+  }
+  if (tokens.length === 0) return [];
+  const run = [tokens[0].text];
+  for (let i = 1; i < tokens.length; i++) {
+    const between = line.slice(tokens[i - 1].end, tokens[i].start);
+    if (!/^,\s*$/.test(between)) break;
+    run.push(tokens[i].text);
+  }
+  return run;
+}
+
 function parsePhaseFiles(planText, phaseNumber) {
   const lines = planText.split("\n");
   const phaseRe = new RegExp("^##\\s+Phase\\s+" + phaseNumber + "[^0-9]");
@@ -94,12 +121,13 @@ function parsePhaseFiles(planText, phaseNumber) {
   }
 
   // 3b. BULLET format: collect `- ` lines that follow until the next bold
-  //     heading or ## heading, extracting the FIRST backtick-quoted token.
+  //     heading or ## heading. Each bullet contributes its leading run of
+  //     comma-separated backtick-quoted paths, never just the first.
   for (let i = filesIdx + 1; i < lines.length; i++) {
     const line = lines[i];
     if (nextSectionRe.test(line)) break;
-    const bm = line.match(/^-\s.*?`([^`]+)`/);
-    if (bm) files.push(bm[1]);
+    if (!/^-\s/.test(line)) continue;
+    for (const f of extractLeadingBacktickRun(line)) files.push(f);
   }
 
   return files;
