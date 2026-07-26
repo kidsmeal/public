@@ -16,11 +16,23 @@
  *       Append one or more paths to the active sentinel's files list,
  *       idempotently. No-op when no sentinel exists.
  *
- * The sentinel is ONLY written/removed by this script (invoked over Bash by the
- * orchestrator). It is never written or removed via a tool op (Edit/Write/rm),
- * which preserves the deadlock-avoidance property: the file-list guard matches
- * Edit|Write|MultiEdit (not Bash), and the commit-guard only denies git
- * commit/push, so a `node sentinel.js` Bash call passes both guards untouched.
+ *   record-round <plan-path> <phase-number> <verdict>
+ *       Append one review round (verdict + the required fixes piped on stdin)
+ *       to .gantry/review-round.json, for role.js to relay as re-review
+ *       context. A round file for a different plan or phase is replaced, so
+ *       another phase's rounds can never leak into this phase's context.
+ *
+ * The review-round file shares the sentinel's lifecycle: `write` for a
+ * DIFFERENT plan/phase removes it (a fresh phase starts with no prior rounds;
+ * a re-write for the same phase - the /gantry:build fix-relay path - keeps
+ * it), and `clear` always removes it.
+ *
+ * These files are ONLY written/removed by this script (invoked over Bash by
+ * the orchestrator). They are never written or removed via a tool op
+ * (Edit/Write/rm), which preserves the deadlock-avoidance property: the
+ * file-list guard matches Edit|Write|MultiEdit (not Bash), and the
+ * commit-guard only denies git commit/push, so a `node sentinel.js` Bash call
+ * passes both guards untouched.
  *
  * Path normalization reuses sentinel-core.js so the write side and read side
  * (the guards) cannot drift on path interpretation.
@@ -33,6 +45,7 @@ const { resolveRoot, normalize } = require("./sentinel-core.js");
 
 const ROOT = resolveRoot(process.env);
 const SENTINEL_PATH = path.join(ROOT, ".gantry", "active-phase.json");
+const ROUND_PATH = path.join(ROOT, ".gantry", "review-round.json");
 
 // ---------------------------------------------------------------------------
 // Plan parsing
@@ -184,6 +197,43 @@ function _exists(p) {
   try { return fs.existsSync(p); } catch { return false; }
 }
 
+// Read .gantry/active-phase.json, or null when absent/malformed.
+function _readSentinelFile() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(SENTINEL_PATH, "utf8"));
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Review-round file helpers
+// ---------------------------------------------------------------------------
+
+// Read .gantry/review-round.json, or null when absent/malformed. The round
+// file is advisory context, so any damage reads as "no rounds recorded".
+function _readRoundFile() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(ROUND_PATH, "utf8"));
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+// Remove the review-round file. Never fatal: round context is advisory and
+// must not block the phase lifecycle commands that call this.
+function _clearRoundFile() {
+  try {
+    fs.unlinkSync(ROUND_PATH);
+  } catch (e) {
+    if (e.code !== "ENOENT") {
+      process.stderr.write("sentinel.js: could not remove review-round.json: " + e.message + "\n");
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Subcommands
 // ---------------------------------------------------------------------------
@@ -242,6 +292,20 @@ function cmdWrite(args) {
 
   const planRel = _toRelPosix(planAbsPath);
 
+  // An existing sentinel for the SAME plan+phase is the /gantry:build
+  // fix-relay path re-running write mid-review-loop: any paths the review
+  // step widened in via add-files (reviewer-cited files outside the plan's
+  // Files list) must survive, or the fix pass gets denied edits to exactly
+  // the files it was sent to fix. A sentinel for a different plan or phase
+  // is a fresh start and its widening does not carry over.
+  const existing = _readSentinelFile();
+  if (existing && existing.plan === planRel && existing.phase === phaseNumber &&
+      Array.isArray(existing.files)) {
+    for (const p of existing.files) {
+      if (typeof p === "string" && !files.includes(p)) files.push(p);
+    }
+  }
+
   const sentinel = {
     plan: planRel,
     phase: phaseNumber,
@@ -259,10 +323,22 @@ function cmdWrite(args) {
     process.exit(1);
   }
 
+  // A recorded review-round file for a DIFFERENT plan or phase is stale - a
+  // fresh phase must start with no prior-round context. Same plan+phase is the
+  // /gantry:build fix-relay path re-running write mid-review-loop; its rounds
+  // are live and must survive, or the re-review loses exactly the context this
+  // file exists to carry.
+  const round = _readRoundFile();
+  if (round && (round.plan !== planRel || round.phase !== phaseNumber)) {
+    _clearRoundFile();
+  }
+
   console.log("sentinel.js: wrote phase " + phaseNumber + " sentinel (" + files.length + " file(s) in scope)");
 }
 
 function cmdClear() {
+  // The phase is closing: any recorded review rounds die with it.
+  _clearRoundFile();
   try {
     fs.unlinkSync(SENTINEL_PATH);
     console.log("sentinel.js: cleared active-phase.json");
@@ -313,6 +389,72 @@ function cmdAddFiles(args) {
   }
 }
 
+function cmdRecordRound(args) {
+  const planArg = args[0];
+  const phaseArg = args[1];
+  const verdict = args[2];
+
+  if (!planArg || !phaseArg || !verdict) {
+    console.error(
+      "sentinel.js record-round: usage: record-round <plan-path> <phase-number> <verdict>" +
+      "  (pipe the required fixes on stdin)"
+    );
+    process.exit(1);
+  }
+
+  const phaseNumber = parseInt(phaseArg, 10);
+  if (isNaN(phaseNumber)) {
+    console.error("sentinel.js record-round: phase-number must be an integer, got: " + phaseArg);
+    process.exit(1);
+  }
+
+  let fixes = "";
+  try { fixes = fs.readFileSync(0, "utf8"); } catch { /* no stdin */ }
+  fixes = fixes.trim();
+  // A round with no fixes text is useless context - refuse it loudly so the
+  // caller re-runs with the reviewer's actual Required fixes piped in.
+  if (!fixes) {
+    console.error(
+      "sentinel.js record-round: no fixes text on stdin - pipe the reviewer's" +
+      " Required fixes (or Fix-now notes) verbatim."
+    );
+    process.exit(1);
+  }
+
+  const planAbsPath = path.isAbsolute(planArg) ? planArg : path.join(ROOT, planArg);
+  const planRel = _toRelPosix(planAbsPath);
+
+  // Rounds accumulate for the same plan+phase; anything else (different phase,
+  // absent, malformed) starts a fresh file, so stale rounds never leak.
+  let state = _readRoundFile();
+  if (
+    !state || state.plan !== planRel || state.phase !== phaseNumber ||
+    !Array.isArray(state.rounds)
+  ) {
+    state = { plan: planRel, phase: phaseNumber, rounds: [] };
+  }
+
+  state.rounds.push({
+    round: state.rounds.length + 1,
+    verdict,
+    fixes,
+    recorded: new Date().toISOString(),
+  });
+
+  try {
+    fs.mkdirSync(path.join(ROOT, ".gantry"), { recursive: true });
+    fs.writeFileSync(ROUND_PATH, JSON.stringify(state, null, 2) + "\n", "utf8");
+  } catch (e) {
+    console.error("sentinel.js record-round: cannot write review-round.json: " + e.message);
+    process.exit(1);
+  }
+
+  console.log(
+    "sentinel.js: recorded review round " + state.rounds.length +
+    " (" + verdict + ") for phase " + phaseNumber
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Dispatch
 // ---------------------------------------------------------------------------
@@ -329,13 +471,17 @@ switch (subcommand) {
   case "add-files":
     cmdAddFiles(rest);
     break;
+  case "record-round":
+    cmdRecordRound(rest);
+    break;
   default:
     console.error(
       "sentinel.js: unknown subcommand: " + subcommand + "\n" +
       "Usage:\n" +
       "  sentinel.js write <plan-path> <phase-number> [session-id]\n" +
       "  sentinel.js clear\n" +
-      "  sentinel.js add-files <path> [<path>...]\n"
+      "  sentinel.js add-files <path> [<path>...]\n" +
+      "  sentinel.js record-round <plan-path> <phase-number> <verdict>  (fixes on stdin)\n"
     );
     process.exit(1);
 }

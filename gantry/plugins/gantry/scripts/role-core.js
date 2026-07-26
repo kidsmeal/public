@@ -327,16 +327,81 @@ function parseTools(md) {
 // Compose the prompt fed to an external backend: the role's instruction body
 // (frontmatter already stripped) plus a runtime block carrying the caller's
 // inputs and a reminder that the tool must gather the diff/files itself.
-function composePrompt(body, inputs) {
+// rereviewBlock (optional) is the prior-rounds context from formatRereviewBlock,
+// appended after the inputs so a re-review carries the earlier verdicts. Absent
+// on a first-round review, which keeps the first-round prompt byte-identical to
+// what it was before re-review context existed.
+function composePrompt(body, inputs, rereviewBlock) {
   const inputBlock = (inputs && inputs.trim()) || "(no extra inputs)";
   return (
     String(body).trim() +
     "\n\n---\n## Runtime inputs\n" +
     inputBlock +
+    (rereviewBlock ? "\n\n" + String(rereviewBlock).trim() : "") +
     "\n\nGather the diff and any files you need yourself using the tools " +
     "available to you, then produce exactly the output described above. " +
     "Return only that output."
   );
+}
+
+// Parse .gantry/review-round.json text into a prior-rounds state object, or
+// null when the text is absent, malformed, or holds no usable round. Fail-safe
+// like parseConfig: a broken round file must never block a review - the caller
+// simply reviews without context, exactly as before the feature existed.
+function parseReviewRound(text) {
+  if (text == null || text === "") return null;
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+  if (typeof parsed.phase !== "number" || !Array.isArray(parsed.rounds)) {
+    return null;
+  }
+  const rounds = parsed.rounds.filter(
+    (r) =>
+      r && typeof r === "object" &&
+      typeof r.verdict === "string" && r.verdict.trim() !== "" &&
+      typeof r.fixes === "string" && r.fixes.trim() !== ""
+  );
+  if (rounds.length === 0) return null;
+  return {
+    plan: typeof parsed.plan === "string" ? parsed.plan : "",
+    phase: parsed.phase,
+    rounds,
+  };
+}
+
+// Render the prior-rounds state into the context block a re-review carries.
+// The wording IS the contract: a required fix a prior round ordered and the
+// implementer applied as ordered is settled, and only a NEW defect the fix
+// itself introduced may reopen it. This is what stops a stateless round-N
+// reviewer from failing the exact change round N-1 required (seen live: round
+// two required a change, round three failed that same change as premature).
+function formatRereviewBlock(state) {
+  const lines = [
+    "## Prior review rounds (re-review context)",
+    "This diff has already been reviewed for phase " + state.phase + ". Each " +
+      "round below issued required fixes that were relayed to the implementer " +
+      "and applied as ordered.",
+    "",
+  ];
+  state.rounds.forEach((r, i) => {
+    lines.push("### Round " + (r.round || i + 1) + " - " + r.verdict.trim());
+    lines.push(r.fixes.trim());
+    lines.push("");
+  });
+  lines.push(
+    "A fix a prior round ordered and the implementer applied as ordered is " +
+      "SETTLED: do not reverse it, order it undone, or fail the diff for " +
+      "containing it, even if you would not have ordered it yourself. The " +
+      "only ground to flag settled work is a NEW defect the fix itself " +
+      "introduced - name that defect specifically. Everything else in the " +
+      "diff gets the normal checklist, fresh."
+  );
+  return lines.join("\n");
 }
 
 // Build the concrete subprocess invocation for a NON-native resolved role.
@@ -467,6 +532,8 @@ module.exports = {
   stripFrontmatter,
   parseTools,
   composePrompt,
+  parseReviewRound,
+  formatRereviewBlock,
   buildInvocation,
   buildGuardSettings,
 };

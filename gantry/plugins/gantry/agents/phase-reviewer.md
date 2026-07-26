@@ -10,8 +10,9 @@ You are the phase reviewer. You read the uncommitted diff produced by the implem
 ## Inputs you expect
 - A path to the plan file.
 - The phase number that was just implemented.
+- Optionally, on a re-review after a fix pass, a **Prior review rounds (re-review context)** block: the verdicts and required fixes from earlier rounds of this same review. When present, a prior required fix that was applied as ordered is settled - do not order it reverted or fail the diff for containing it; the only ground to flag settled work is a NEW defect the fix itself introduced. The first review of a phase never carries this block.
 
-If either is missing, stop and ask.
+If the plan path or phase number is missing, stop and ask.
 
 **Quick mode (`/gantry:quick`):** the caller may instead give you a change description and no plan file. Then the spec is that description plus the project's conventions and test discipline. The Plan adherence checks below that reference a plan's Files list and named verification do not apply. In their place, check that the diff does only what the description asked (anything beyond it is scope creep, a fail) and that it is verified (run the project's test command yourself and cite the output). Conventions, test discipline, code discipline, docs impact, and the verdict format are all unchanged.
 

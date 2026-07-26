@@ -377,6 +377,44 @@ test("add-files: no-op (no throw, exit 0) when sentinel is absent", () => {
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+// Regression for the fix-relay widening bug: /gantry:review relays a FAIL by
+// running add-files with the reviewer's cited paths, then /gantry:build re-runs
+// `write` for the same plan+phase before spawning the fix pass. That write must
+// keep the widened paths, or the fix pass is denied edits to the very files the
+// reviewer cited.
+
+test("write: same plan+phase re-write keeps paths widened via add-files", () => {
+  const dir = mk();
+  try {
+    const planPath = writePlan(dir);
+    run(dir, ["write", planPath, "2"]);
+    // Widen with a path that is NOT in Phase 2's Files list.
+    run(dir, ["add-files", "src/cited-by-reviewer.js"]);
+    const r = run(dir, ["write", planPath, "2"]);
+    assert.equal(r.status, 0, r.stderr);
+    const s = readSentinel(dir);
+    assert.ok(s.files.includes("src/cited-by-reviewer.js"),
+      "add-files widening must survive a same-phase re-write");
+    // Plan files still present, and merge stays idempotent (no duplicates).
+    assert.deepEqual(s.files, ["src/foo.js", "src/bar.js", "src/cited-by-reviewer.js"],
+      "files should be the plan's entries plus the widened path, no duplicates");
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("write: different phase drops paths widened via add-files", () => {
+  const dir = mk();
+  try {
+    const planPath = writePlan(dir);
+    run(dir, ["write", planPath, "2"]);
+    run(dir, ["add-files", "src/cited-by-reviewer.js"]);
+    const r = run(dir, ["write", planPath, "3"]);
+    assert.equal(r.status, 0, r.stderr);
+    const s = readSentinel(dir);
+    assert.deepEqual(s.files, ["lib/baz.js"],
+      "a new phase must start clean, dropping prior-phase widening");
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 // Regression for the multi-file-per-bullet bug (found live by a codex phase
 // review running a real plan): a bullet like "- modify `a.js`, `b.js`, `c.js`"
 // must contribute all three files, not just the first, while backtick-quoted
@@ -416,5 +454,130 @@ test("write: a bullet with multiple comma-separated backtick paths contributes e
       ["a.js", "b.js", "c.js", "d.js", "e.js", "f.js"],
       "every backtick-quoted path across all bullets must be captured, in order"
     );
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+// --- record-round subcommand: re-review context rounds ---
+
+// Like run(), but with stdin content (the fixes text record-round expects).
+function runIn(dir, args, input) {
+  return spawnSync(process.execPath, [SENTINEL_SCRIPT, ...args], {
+    encoding: "utf8",
+    input,
+    env: { ...process.env, GANTRY_PROJECT_DIR: dir },
+  });
+}
+function readRounds(dir) {
+  return JSON.parse(fs.readFileSync(path.join(dir, ".gantry", "review-round.json"), "utf8"));
+}
+function roundsExist(dir) {
+  return fs.existsSync(path.join(dir, ".gantry", "review-round.json"));
+}
+
+test("record-round: creates review-round.json with round 1 from stdin fixes", () => {
+  const dir = mk();
+  try {
+    const planPath = writePlan(dir);
+    const r = runIn(dir, ["record-round", planPath, "2", "FAIL"], "1. fix the thing\n2. fix the other thing\n");
+    assert.equal(r.status, 0, "record-round should exit 0\nstdout: " + r.stdout + "\nstderr: " + r.stderr);
+    const s = readRounds(dir);
+    assert.equal(s.plan, "docs/plan.md", "plan must be stored root-relative posix");
+    assert.equal(s.phase, 2);
+    assert.equal(s.rounds.length, 1);
+    assert.equal(s.rounds[0].round, 1);
+    assert.equal(s.rounds[0].verdict, "FAIL");
+    assert.match(s.rounds[0].fixes, /fix the thing/);
+    assert.ok(s.rounds[0].recorded, "round must carry a recorded timestamp");
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("record-round: appends round 2 for the same plan and phase", () => {
+  const dir = mk();
+  try {
+    const planPath = writePlan(dir);
+    runIn(dir, ["record-round", planPath, "2", "FAIL"], "round one fixes");
+    const r = runIn(dir, ["record-round", planPath, "2", "PASS-WITH-NOTES"], "round two fixes");
+    assert.equal(r.status, 0, r.stderr);
+    const s = readRounds(dir);
+    assert.equal(s.rounds.length, 2, "rounds must accumulate for the same plan+phase");
+    assert.equal(s.rounds[1].round, 2);
+    assert.equal(s.rounds[1].verdict, "PASS-WITH-NOTES");
+    assert.match(s.rounds[1].fixes, /round two fixes/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("record-round: a different phase starts a fresh file (no cross-phase leak)", () => {
+  const dir = mk();
+  try {
+    const planPath = writePlan(dir);
+    runIn(dir, ["record-round", planPath, "2", "FAIL"], "phase two fixes");
+    const r = runIn(dir, ["record-round", planPath, "3", "FAIL"], "phase three fixes");
+    assert.equal(r.status, 0, r.stderr);
+    const s = readRounds(dir);
+    assert.equal(s.phase, 3);
+    assert.equal(s.rounds.length, 1, "prior phase's rounds must be discarded");
+    assert.match(s.rounds[0].fixes, /phase three fixes/);
+    assert.doesNotMatch(JSON.stringify(s), /phase two fixes/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("record-round: empty stdin exits non-zero and writes nothing", () => {
+  const dir = mk();
+  try {
+    const planPath = writePlan(dir);
+    const r = runIn(dir, ["record-round", planPath, "2", "FAIL"], "");
+    assert.notEqual(r.status, 0, "a round with no fixes text must be refused");
+    assert.match(r.stderr, /stdin/i, "the error must say the fixes go on stdin");
+    assert.ok(!roundsExist(dir), "no round file should be written");
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("record-round: missing args exit non-zero with usage", () => {
+  const dir = mk();
+  try {
+    const r = runIn(dir, ["record-round", "plan.md", "2"], "fixes");
+    assert.notEqual(r.status, 0, "record-round without a verdict must fail");
+    assert.match(r.stderr, /usage/i);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("write: removes a stale round file recorded for a different phase", () => {
+  const dir = mk();
+  try {
+    const planPath = writePlan(dir);
+    runIn(dir, ["record-round", planPath, "2", "FAIL"], "phase two fixes");
+    assert.ok(roundsExist(dir));
+    const r = run(dir, ["write", planPath, "3"]);
+    assert.equal(r.status, 0, r.stderr);
+    assert.ok(!roundsExist(dir),
+      "starting phase 3 must remove phase 2's recorded rounds");
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("write: keeps the round file for the same plan and phase (the fix-relay path)", () => {
+  const dir = mk();
+  try {
+    const planPath = writePlan(dir);
+    run(dir, ["write", planPath, "2"]);
+    runIn(dir, ["record-round", planPath, "2", "FAIL"], "mid-loop fixes");
+    // /gantry:build re-invoked for the fix pass runs write again for the SAME
+    // plan+phase; the live rounds must survive or the re-review loses its context.
+    const r = run(dir, ["write", planPath, "2"]);
+    assert.equal(r.status, 0, r.stderr);
+    assert.ok(roundsExist(dir), "same-phase re-write must keep the recorded rounds");
+    assert.match(readRounds(dir).rounds[0].fixes, /mid-loop fixes/);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("clear: removes the round file along with the sentinel", () => {
+  const dir = mk();
+  try {
+    const planPath = writePlan(dir);
+    run(dir, ["write", planPath, "2"]);
+    runIn(dir, ["record-round", planPath, "2", "FAIL"], "some fixes");
+    const r = run(dir, ["clear"]);
+    assert.equal(r.status, 0, r.stderr);
+    assert.ok(!sentinelExists(dir), "sentinel must be cleared");
+    assert.ok(!roundsExist(dir), "recorded rounds die with the phase");
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });

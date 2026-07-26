@@ -332,6 +332,87 @@ test("composePrompt appends a runtime inputs block", () => {
   assert.match(out, /plan: p\.md, phase: 2/);
 });
 
+test("composePrompt without a re-review block is unchanged (no prior-rounds text)", () => {
+  const out = core.composePrompt("INSTRUCTIONS", "plan: p.md, phase: 2");
+  assert.doesNotMatch(out, /Prior review rounds/,
+    "a first-round prompt must not mention prior rounds");
+});
+
+test("composePrompt inserts the re-review block between the inputs and the gather instruction", () => {
+  const state = {
+    plan: "docs/p.md", phase: 3,
+    rounds: [{ round: 1, verdict: "FAIL", fixes: "1. render NOW.md via the renderer" }],
+  };
+  const block = core.formatRereviewBlock(state);
+  const out = core.composePrompt("INSTRUCTIONS", "plan: p.md, phase: 3", block);
+  const inputsIdx = out.indexOf("Runtime inputs");
+  const blockIdx = out.indexOf("Prior review rounds");
+  const gatherIdx = out.indexOf("Gather the diff");
+  assert.ok(blockIdx > inputsIdx, "re-review block must follow the runtime inputs");
+  assert.ok(gatherIdx > blockIdx, "gather instruction must follow the re-review block");
+  assert.match(out, /render NOW\.md via the renderer/);
+});
+
+// --- parseReviewRound / formatRereviewBlock ---
+
+const ROUND_STATE = {
+  plan: "docs/p_plan.md",
+  phase: 3,
+  rounds: [
+    { round: 1, verdict: "FAIL", fixes: "1. init.js must render NOW.md via the renderer", recorded: "2026-07-26T00:00:00Z" },
+    { round: 2, verdict: "PASS-WITH-NOTES", fixes: "1. rename the helper", recorded: "2026-07-26T01:00:00Z" },
+  ],
+};
+
+test("parseReviewRound parses a valid round file", () => {
+  const state = core.parseReviewRound(JSON.stringify(ROUND_STATE));
+  assert.equal(state.phase, 3);
+  assert.equal(state.plan, "docs/p_plan.md");
+  assert.equal(state.rounds.length, 2);
+  assert.equal(state.rounds[0].verdict, "FAIL");
+});
+
+test("parseReviewRound fails safe to null on garbage", () => {
+  assert.equal(core.parseReviewRound(null), null);
+  assert.equal(core.parseReviewRound(""), null);
+  assert.equal(core.parseReviewRound("not json {"), null);
+  assert.equal(core.parseReviewRound("[1,2,3]"), null);
+  assert.equal(core.parseReviewRound(JSON.stringify({ phase: "3", rounds: [] })), null);
+});
+
+test("parseReviewRound with no usable rounds is null, and unusable rounds are dropped", () => {
+  assert.equal(core.parseReviewRound(JSON.stringify({ phase: 3, rounds: [] })), null,
+    "empty rounds means no context");
+  assert.equal(
+    core.parseReviewRound(JSON.stringify({ phase: 3, rounds: [{ verdict: "FAIL", fixes: "" }] })),
+    null, "a round with empty fixes is unusable");
+  const mixed = core.parseReviewRound(JSON.stringify({
+    phase: 3,
+    rounds: [{ verdict: "FAIL", fixes: "fix it" }, { bogus: true }],
+  }));
+  assert.equal(mixed.rounds.length, 1, "only the well-formed round survives");
+});
+
+test("formatRereviewBlock renders every round with verdict and fixes", () => {
+  const block = core.formatRereviewBlock(ROUND_STATE);
+  assert.match(block, /Prior review rounds/);
+  assert.match(block, /Round 1 - FAIL/);
+  assert.match(block, /init\.js must render NOW\.md via the renderer/);
+  assert.match(block, /Round 2 - PASS-WITH-NOTES/);
+  assert.match(block, /rename the helper/);
+  assert.match(block, /phase 3/);
+});
+
+test("formatRereviewBlock carries the settled-unless-NEW-defect contract", () => {
+  const block = core.formatRereviewBlock(ROUND_STATE);
+  assert.match(block, /SETTLED/,
+    "the block must declare applied prior fixes settled");
+  assert.match(block, /applied as ordered/,
+    "settled status must be conditioned on the fix being applied as ordered");
+  assert.match(block, /NEW defect/,
+    "the one reopening ground must be a NEW defect the fix introduced");
+});
+
 // --- buildInvocation ---
 
 test("buildInvocation throws for a native descriptor", () => {

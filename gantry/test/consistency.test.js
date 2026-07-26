@@ -412,3 +412,89 @@ test("models.md states the design-reviewer adversary is parsed and shown but dor
     "models.md must state the design-reviewer adversary is dormant (reserved for v2)"
   );
 });
+
+// --- Re-review context: the orchestrator docs must carry the mechanism ---
+
+test("review.md documents the re-review context mechanism", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "commands", "review.md"), "utf8"
+  );
+  assert.ok(
+    text.includes("record-round"),
+    "review.md must instruct recording the round before each fix relay"
+  );
+  assert.ok(
+    text.includes("--context .gantry/review-round.json"),
+    "review.md must pass the context flag on external re-reviews"
+  );
+  assert.ok(
+    text.includes("show-round"),
+    "review.md must use role.js show-round for native re-reviews"
+  );
+  assert.ok(
+    /settled/i.test(text),
+    "review.md must state that applied prior fixes are settled"
+  );
+  assert.ok(
+    /NEW defect/.test(text),
+    "review.md must state the NEW-defect reopening ground"
+  );
+  assert.ok(
+    /round one|first review/i.test(text),
+    "review.md must keep context out of first-round reviews"
+  );
+});
+
+test("build.md fix-relay text records the round and re-reviews with context", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "commands", "build.md"), "utf8"
+  );
+  assert.ok(
+    text.includes("record-round"),
+    "build.md must mention recording the round on the fix-relay path"
+  );
+  assert.ok(
+    text.includes("--context .gantry/review-round.json"),
+    "build.md must mention the re-review context flag"
+  );
+});
+
+test("SKILL.md Stage 3 re-review loop records rounds and passes context", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "skills", "gantry", "SKILL.md"), "utf8"
+  );
+  assert.ok(
+    text.includes("record-round"),
+    "SKILL.md must record the round before each fix relay"
+  );
+  assert.ok(
+    text.includes("--context .gantry/review-round.json"),
+    "SKILL.md must pass the context flag on external re-reviews"
+  );
+  assert.ok(
+    text.includes("show-round"),
+    "SKILL.md must use role.js show-round for native re-reviews"
+  );
+  assert.ok(
+    /first review of a phase carries no context|never carries context/i.test(text),
+    "SKILL.md must keep context out of first-round reviews"
+  );
+});
+
+test("phase-reviewer.md documents the optional prior-rounds input and the settled rule", () => {
+  const text = fs.readFileSync(
+    path.join(PLUGIN, "agents", "phase-reviewer.md"), "utf8"
+  );
+  assert.ok(
+    text.includes("Prior review rounds"),
+    "phase-reviewer.md must name the optional re-review context block"
+  );
+  assert.ok(
+    /settled/i.test(text),
+    "phase-reviewer.md must state that applied prior fixes are settled"
+  );
+  assert.ok(
+    /NEW defect/.test(text),
+    "phase-reviewer.md must state the NEW-defect reopening ground"
+  );
+});

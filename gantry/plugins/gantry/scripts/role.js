@@ -17,7 +17,7 @@
  *       (with the reason) on an invalid assignment - notably an implementer
  *       routed off the Claude Code harness.
  *
- *   run <role> [--adversary] [-- <inputs...>]
+ *   run <role> [--adversary] [--context <file>] [-- <inputs...>]
  *       Run a NON-native backend: compose the prompt from the agent .md body
  *       plus <inputs>, spawn the backend, stream its stderr (progress) through,
  *       and print its stdout (the agent's final output) for the orchestrator to
@@ -28,6 +28,20 @@
  *       (a diff for phase-reviewer, a design doc for design-reviewer).
  *       A native adversary is refused (use the Task tool for native roles). An
  *       adversary identical to the primary is refused (warn and exit non-zero).
+ *       With --context <file>, reads the named review-round file (written by
+ *       `sentinel.js record-round`) and appends the prior rounds' verdicts and
+ *       required fixes to the prompt as re-review context, with the rule that
+ *       a prior required fix applied as ordered is settled unless it introduced
+ *       a NEW defect. An absent or malformed context file warns and runs the
+ *       review without context - the gate is never blocked by missing context.
+ *       First-round reviews are invoked without the flag and are unchanged.
+ *
+ *   show-round
+ *       Print the same re-review context block run --context would append,
+ *       rendered from .gantry/review-round.json, for the orchestrator to paste
+ *       into a NATIVE reviewer's Task prompt. Prints nothing (exit 0) when no
+ *       rounds are recorded, so native and external re-reviews carry identical
+ *       wording from one formatter.
  *
  *   detect
  *       Report which external agent CLIs (codex, claude, gemini) are on PATH.
@@ -158,15 +172,29 @@ function cmdResolve(args) {
 
 function cmdRun(args) {
   const role = args[0];
-  if (!role) fail("run: usage: run <role> [--adversary] [-- <inputs...>]");
+  if (!role) fail("run: usage: run <role> [--adversary] [--context <file>] [-- <inputs...>]");
 
-  // Parse --adversary flag (must immediately follow the role name, before --).
+  // Parse flags (any order, between the role name and the -- separator).
   let rest = args.slice(1);
-  const adversaryMode = rest[0] === "--adversary";
-  if (adversaryMode) rest = rest.slice(1);
+  let adversaryMode = false;
+  let contextPath = null;
+  while (rest.length > 0) {
+    if (rest[0] === "--adversary") {
+      adversaryMode = true;
+      rest = rest.slice(1);
+      continue;
+    }
+    if (rest[0] === "--context") {
+      if (!rest[1] || rest[1] === "--") fail("run: --context requires a file path");
+      contextPath = rest[1];
+      rest = rest.slice(2);
+      continue;
+    }
+    break;
+  }
 
-  // Inputs: everything after the role (and optional --adversary), dropping an
-  // optional `--` separator.
+  // Inputs: everything after the role and flags, dropping an optional `--`
+  // separator.
   if (rest[0] === "--") rest = rest.slice(1);
   const inputs = rest.join(" ");
 
@@ -228,7 +256,32 @@ function cmdRun(args) {
         "the primary reviewer. Apply the same checklist independently.)";
     promptBody = body + "\n\n" + advNote;
   }
-  const prompt = core.composePrompt(promptBody, inputs);
+
+  // Re-review context: an absent or malformed context file is a warning, never
+  // a failure - the review gate must run regardless, just without the context.
+  let rereviewBlock = null;
+  if (contextPath) {
+    const contextAbs = path.isAbsolute(contextPath)
+      ? contextPath
+      : path.join(ROOT, contextPath);
+    let contextText = null;
+    try {
+      contextText = fs.readFileSync(contextAbs, "utf8");
+    } catch {
+      /* absent -> warn below */
+    }
+    const state = core.parseReviewRound(contextText);
+    if (state) {
+      rereviewBlock = core.formatRereviewBlock(state);
+    } else {
+      process.stderr.write(
+        "role.js: context file '" + contextPath + "' is absent or malformed;" +
+        " running the review without re-review context.\n"
+      );
+    }
+  }
+
+  const prompt = core.composePrompt(promptBody, inputs, rereviewBlock);
   const allowedTools = core.parseTools(agentMd);
 
   // Secret: read the backend's declared env var here (kept out of role-core).
@@ -364,6 +417,27 @@ function cmdShow() {
   }
 }
 
+// --- show-round ---
+
+// Print the re-review context block for the recorded rounds, or nothing when
+// no rounds are recorded. The orchestrator pastes this into a NATIVE
+// reviewer's Task prompt; the external path gets the identical block via
+// `run --context`, so both dispatches carry one formatter's wording.
+function cmdShowRound() {
+  let text = null;
+  try {
+    text = fs.readFileSync(path.join(ROOT, ".gantry", "review-round.json"), "utf8");
+  } catch {
+    /* absent -> nothing to show */
+  }
+  const state = core.parseReviewRound(text);
+  if (!state) {
+    process.stderr.write("role.js: no recorded review rounds; nothing to show.\n");
+    return;
+  }
+  console.log(core.formatRereviewBlock(state));
+}
+
 // --- write-default ---
 
 function cmdWriteDefault() {
@@ -390,15 +464,17 @@ switch (subcommand) {
   case "run": cmdRun(rest); break;
   case "detect": cmdDetect(); break;
   case "show": cmdShow(); break;
+  case "show-round": cmdShowRound(); break;
   case "write-default": cmdWriteDefault(); break;
   default:
     fail(
       "unknown subcommand: " + subcommand + "\n" +
       "Usage:\n" +
       "  role.js resolve <role>\n" +
-      "  role.js run <role> [--adversary] [-- <inputs...>]\n" +
+      "  role.js run <role> [--adversary] [--context <file>] [-- <inputs...>]\n" +
       "  role.js detect\n" +
       "  role.js show\n" +
+      "  role.js show-round\n" +
       "  role.js write-default"
     );
 }
