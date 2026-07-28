@@ -1,3 +1,5 @@
+> **Retired 2026-07-27.** Gantry merged into [ClauDHD](https://github.com/kidsmeal/ClauDHD) at its 1.0.0 release: the runtime, agents, guards, and command surface all live there now, evolved past this source. This folder is frozen history. Do not develop here.
+
 # Gantry
 
 A gated design, plan, build, and review pipeline for [Claude Code](https://claude.com/claude-code).
