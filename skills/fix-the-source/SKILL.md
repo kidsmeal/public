@@ -31,19 +31,6 @@ Stop and re-trace when:
 
 The source fix is usually smaller than the patch pile it replaces. If the fix needs a new subsystem, re-check step 4. Sometimes the improvement is deletion: a part that never did its job can go.
 
-## Example
-
-An agent pipeline: a planner writes tickets, workers run them, a harness runs their commands.
-
-| | Patch view | Source view |
-|---|---|---|
-| Symptom | A worker is denied a GUI command its acceptance check names, 7 retries in a row | Same |
-| Where noticed | The worker's shell permissions | Same |
-| Where made | | The planner copied checks meant for a person at a desktop into tickets a headless worker runs |
-| Copies | | 6 more queued tickets with the same kind of check |
-| Existing answer | | The project already tests headless and saves screenshots from a small capture script |
-| Fix | Allowlist the GUI command, then the next form of it, then the next | Give the planner the list of commands a worker can run; checks must name one of them, or be a visual check for a person; rewrite the 6 queued tickets; ticket creation refuses a check no worker can run |
-
 ## Report
 
 When you finish, report in this shape:

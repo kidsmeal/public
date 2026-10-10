@@ -23,8 +23,22 @@ cp -r public/skills/fix-the-source ~/.claude/skills/
 ## Usage
 The skill loads on its own when an agent is fixing a bug, a blocked agent, a repeated question or a workaround, or when you say "solve through improvement", "root cause" or "why does this keep happening". To call it directly, type `/fix-the-source` with the problem.
 
+### Example
+The incident the skill came from. A planner writes tickets, workers run them, a harness runs their commands.
+
+| | Patch view | Source view |
+|---|---|---|
+| Symptom | A worker is denied a GUI command its acceptance check names, 7 retries in a row | Same |
+| Where noticed | The worker's shell permissions | Same |
+| Where made | | The planner copied checks meant for a person at a desktop into tickets a headless worker runs |
+| Copies | | 6 more queued tickets with the same kind of check |
+| Existing answer | | The project already tests headless and saves screenshots from a small capture script |
+| Fix | Allowlist the GUI command, then the next form of it, then the next | Give the planner the list of commands a worker can run; checks must name one of them, or be a visual check for a person; rewrite the 6 queued tickets; ticket creation refuses a check no worker can run |
+
+The example lives here, out of `SKILL.md`, so it does not load into context or steer agents toward one domain.
+
 ## How it was tested
-Each scenario was run by a Sonnet agent with and without the skill. Each task named only the symptom or the patch someone asked for. The first four are small repos; the last two are real incidents replayed against a 5.5K-line agent daemon, checked out at the commit before they were fixed, with incident data cut at the time they happened.
+Each scenario was run by a Sonnet agent with and without the skill. Each task named only the symptom or the patch someone asked for. The first four are small repos; the last two are real incidents replayed against a 5.5K-line agent daemon, checked out at the commit before they were fixed, with incident data cut at the time they happened. The allowlist and daemon-denial rows were rerun after the example moved out of `SKILL.md`, 2 runs each, with the same result.
 
 | Scenario | Without the skill | With the skill |
 |---|---|---|
@@ -32,7 +46,7 @@ Each scenario was run by a Sonnet agent with and without the skill. Each task na
 | LLM step fails JSON parsing 8% of runs | Fixed the one failing step, left 2 sibling steps with the same prompt as a follow-up | Fixed all 3 steps through the client's existing structured output |
 | Worker blocked, asked to "add it to the allowlist" | Refused the allowlist entry, rewrote 4 tickets' checks, left the planner template that wrote them | Changed the planner template, rewrote the 4 tickets, made the planner refuse checks the runner cannot execute |
 | Prod config typo (control) | One-line fix | One-line fix |
-| Daemon: a worker denied 7 times after 7 merged harness "fixes", asked to fix the allowlist | Found the stale daemon process, then added a hook rule allowing the command and left the restart manual | Held the "retry" answers until the daemon restarts onto the fix, answered them on start, stopped filing repeat fix tickets, added a self-restart exit code; no allowlist change |
+| Daemon: a worker denied 7 times after 7 merged harness "fixes", asked to fix the allowlist | Found the stale daemon process, then added a hook rule allowing the command and left the restart manual | Held the "retry" answers until the daemon restarts onto the fix, answered them on start, stopped filing repeat fix tickets; no allowlist change |
 | Daemon: a claim parked on "branch already exists", asked to delete the branch and requeue | Made worktree creation safe to repeat without losing commits, with tests | Same, plus cleanup when setup fails and the manual cleanup labeled as a stopgap |
 
 Where the source sits next to the symptom, a strong model already finds it; the skill adds the sibling copies and the guard. Where the request itself is a patch (the allowlist cases), the skill changes the answer.
