@@ -4,12 +4,14 @@ A Claude Code skill that makes an agent fix the part of a system that produced a
 
 ## What it does
 - Walks back from the symptom (a denied command, a 500, a failing check) to the template, prompt, rule or planner that produced it.
-- Searches for other bad outputs the same producer already made, and repairs them with the source fix.
+- Stops tracing at the first producer the evidence supports; an unsettled cause is reported as unverified.
+- Searches for other bad outputs the same producer already made, and repairs the ones inside the task. Copies in shared systems, external trackers or production data are listed for approval.
 - Checks whether the project already solves the problem elsewhere before building anything new.
-- Adds a check where the producer hands off its output, sized to the failure (an assert, a schema, a required field).
+- Adds a check where the producer hands off its output, sized to the failure (an assert, a schema, a required field), or reuses an existing one. No check when the fix already makes the bad output impossible.
+- Verifies: reproduces the original symptom, runs the producer's tests, checks one repaired copy.
 - Stops after the instance fix when the cause was a one-off with no copies.
 - Labels a downstream fix (retry, allowlist entry, output correction) as a patch and names what it leaves running.
-- Ends with a short report: symptom, producer, copies, existing answer, fix, repairs, guard, patches left.
+- Ends with a short report: symptom, producer, copies, existing answer, fix, repairs, guard, verification, patches left.
 
 ## Install
 1. Copy the `fix-the-source` folder into `~/.claude/skills/` (or `.claude/skills/` in a project).
@@ -38,18 +40,27 @@ The incident the skill came from. A planner writes tickets, workers run them, a 
 The example lives here, out of `SKILL.md`, so it does not load into context or steer agents toward one domain.
 
 ## How it was tested
-Each scenario was run by a Sonnet agent with and without the skill. Each task named only the symptom or the patch someone asked for. The first four are small repos; the last two are real incidents replayed against a 5.5K-line agent daemon, checked out at the commit before they were fixed, with incident data cut at the time they happened. The allowlist and daemon-denial rows were rerun after the example moved out of `SKILL.md`, 2 runs each, with the same result.
+Sonnet agents, with and without the skill, read a repo and replied with the fix they would make. Nothing was executed; the author of the skill judged the replies. Each task named only the symptom, or the patch someone asked for.
+
+- Rows 1 to 5 are small repos written by the same session that wrote the skill. Some carry hints a real repo may not (a template comment "copied from docs/QA.md", an alert saying the file was "edited by hand"); row 5 removes that hint.
+- Rows 6 and 7 are real incidents replayed against a 5.5K-line agent daemon, checked out at the commit before the fix, with incident data cut at the time they happened. Those agents also saw the daemon's live `CLAUDE.md`, which describes the later self-restart fix; results that could come from it are left out.
+- Runs are per arm. Versions: v2 added "question the request"; v3 moved the example to the README; v5 is the current `SKILL.md`.
 
 | Scenario | Without the skill | With the skill |
 |---|---|---|
-| Invoice 500 from a null currency | Fixed the importer, backfilled 3 rows | Same, plus a required-currency check on the model |
-| LLM step fails JSON parsing 8% of runs | Fixed the one failing step, left 2 sibling steps with the same prompt as a follow-up | Fixed all 3 steps through the client's existing structured output |
-| Worker blocked, asked to "add it to the allowlist" | Refused the allowlist entry, rewrote 4 tickets' checks, left the planner template that wrote them | Changed the planner template, rewrote the 4 tickets, made the planner refuse checks the runner cannot execute |
-| Prod config typo (control) | One-line fix | One-line fix |
-| Daemon: a worker denied 7 times after 7 merged harness "fixes", asked to fix the allowlist | Found the stale daemon process, then added a hook rule allowing the command and left the restart manual | Held the "retry" answers until the daemon restarts onto the fix, answered them on start, stopped filing repeat fix tickets; no allowlist change |
-| Daemon: a claim parked on "branch already exists", asked to delete the branch and requeue | Made worktree creation safe to repeat without losing commits, with tests | Same, plus cleanup when setup fails and the manual cleanup labeled as a stopgap |
+| 1. Invoice 500 from a null currency | Fixed the importer, backfilled 3 rows (1 run) | v5, 2 of 2: replaced the importer's own map with the existing `currency_for_country()`, found 3 affected rows, asked before touching stored invoices |
+| 2. LLM step fails JSON parsing 8% of runs | Fixed the failing step, left 2 sibling steps with the same prompt as a follow-up (1 run) | v5, 2 of 2: fixed all 3 steps through the client's existing structured output, no extra guard |
+| 3. Worker blocked, asked to "add it to the allowlist" | Refused the allowlist entry, rewrote 4 tickets' checks, left the planner template that wrote them (1 run) | v5, 2 of 2: changed the planner template, rewrote the 4 tickets, added a planner test against the allowlist |
+| 4. Prod config typo, alert says "edited by hand" (control) | One-line fix (1 run) | v5, 2 of 2: one-line fix, no guard |
+| 5. Same typo, no hint in the alert (control) | One-line fix, DNS check suggested as a follow-up (2 runs) | v5, 2 of 2: one-line fix, no guard |
+| 6. Daemon: a worker denied 7 times after 7 merged harness "fixes", asked to fix the allowlist | Found the stale daemon process, then added a hook rule allowing the command and left the restart manual (1 run) | v3, 2 of 2: held the "retry" answers until the daemon restarts onto the fix, answered them on start, stopped filing repeat fix tickets; no allowlist change |
+| 7. Daemon: a claim parked on "branch already exists", asked to delete the branch and requeue | Made worktree creation safe to repeat without losing commits, with tests (1 run) | v2, 1 run: same, plus cleanup when setup fails and the manual cleanup labeled as a stopgap |
 
-Where the source sits next to the symptom, a strong model already finds it; the skill adds the sibling copies and the guard. Where the request itself is a patch (the allowlist cases), the skill changes the answer.
+What the runs show:
+- When the source sits next to the symptom (rows 1, 2, 7), the model finds it without the skill. The skill adds the sibling copies and the guard, or reuses an existing check.
+- When the request itself is a patch (rows 3, 6), the baseline also avoided the requested patch in row 3; the skill added the template fix and the guard. In row 6 the baseline applied a patch and the skill did not.
+- One regression: an intermediate version told agents to guard every boundary and verify, and 1 of 3 control runs added a DNS lookup on config load for the one-off typo. The line "people editing files by hand is not a producer that keeps running unless the same mistake has happened before" fixed it; every control run since is a one-line fix.
+- Most baselines are 1 run, so a single difference is weak evidence.
 
 The skill came out of a week of fixing an agent pipeline where most fixes landed at the symptom and the same problems came back elsewhere.
 
