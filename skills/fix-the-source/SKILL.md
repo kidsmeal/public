@@ -11,11 +11,12 @@ Most fixes land where a problem was noticed: the failing ticket, the denied comm
 
 1. **Name what is wrong, concretely.** The bad state, where it showed up, and one piece of evidence (log line, file, ticket, output).
 2. **Find where it was made.** Walk back from where it was noticed to the first step that created it: the template, prompt, rule, config, planner, generator, default or habit. The place it failed is downstream; keep walking until you reach something that will make it again. If your fix only edits outputs (data rows, tickets, generated files), the thing that made them is still running.
+   Question the request too. The command a worker needs, the check it must pass or the change someone asks for can itself be a bad output of an earlier step. A failure can have more than one producer; after finding one, ask why the failing step was needed at all.
 3. **Count the copies.** Search for other things the same producer already made: queued work, other files, other tickets, past logs. If there are none and the producer will not run again (a one-off hand edit, a typo), fix the instance and stop here. The remaining steps are for producers that keep producing.
-4. **Look for an existing answer.** Before building anything, check whether the project, the codebase or the user already solves this elsewhere (a pattern, a tool, a convention, a working sibling). Reuse beats new machinery.
+4. **Look for an existing answer.** Before building anything, check how the same job is already done: elsewhere in the codebase, in sibling projects, in the team's docs, or in how the user does it by hand (a pattern, a tool, a convention, a working sibling). Reuse beats new machinery.
 5. **Fix the producer.** Change it so it stops making the bad thing. Often the smallest change is a rule, an input it was missing, or deleting it.
 6. **Repair what it already made.** Apply the fix to the copies found in step 3.
-7. **Guard the boundary.** Where the producer hands its output on, add a check that refuses the bad shape, so a regression fails at creation instead of downstream. Keep the check as cheap as the failure: an assert, a schema, a lint rule, a required field.
+7. **Guard the boundary.** Where the producer hands its output on, add a check that refuses the bad shape, so a regression fails at creation instead of downstream. Keep the check as cheap as the failure: an assert, a schema, a lint rule, a required field. Prefer a check that makes the bad shape impossible to create over one that reports it afterward; a comment or a "be careful" note is not a guard.
 
 ## Is it a patch?
 
